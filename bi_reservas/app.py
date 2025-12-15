@@ -17,18 +17,27 @@ def load_data():
     from google.oauth2.service_account import Credentials
 
     scopes = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
+
     creds = Credentials.from_service_account_info(
         st.secrets["gcp_service_account"],
         scopes=scopes
     )
 
     gc = gspread.authorize(creds)
-    sh = gc.open_by_key(st.secrets["1Xh3pV3AWV5hiG6B8AApOcCGzrZ8cgXtg1FClhDHYHF4"])
-    ws = sh.worksheet(st.secrets["Sheet1"])
+
+    sh = gc.open_by_key(
+        st.secrets["google_sheets"]["spreadsheet_id"]
+    )
+
+    ws = sh.worksheet(
+        st.secrets["google_sheets"]["sheet_name"]
+    )
 
     data = ws.get_all_records()
-    return pd.DataFrame(data)
+    df = pd.DataFrame(data)
+    return df
 
+df = load_data()
 
 # ======================
 # 2. COLUNAS ESPERADAS
