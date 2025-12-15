@@ -13,10 +13,22 @@ st.set_page_config(page_title="BI Reservas", layout="wide")
 
 @st.cache_data
 def load_data():
-    df = pd.read_excel("reservas.xlsx")
-    return df
+    import gspread
+    from google.oauth2.service_account import Credentials
 
-df = load_data()
+    scopes = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
+    creds = Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=scopes
+    )
+
+    gc = gspread.authorize(creds)
+    sh = gc.open_by_key(st.secrets["1Xh3pV3AWV5hiG6B8AApOcCGzrZ8cgXtg1FClhDHYHF4"])
+    ws = sh.worksheet(st.secrets["Sheet1"])
+
+    data = ws.get_all_records()
+    return pd.DataFrame(data)
+
 
 # ======================
 # 2. COLUNAS ESPERADAS
