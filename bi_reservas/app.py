@@ -434,7 +434,10 @@ agg = (
 
 # métricas calculadas
 agg["receita_diarias"] = agg["receita_total"] - agg["receita_limpeza"]
-agg["ocupacao"] = (agg["noites_ocupadas"] / dias_no_mes) * 100
+unidades_ativas = df_f[["id_propriedade", "unidade"]
+                       ].drop_duplicates().shape[0]
+agg["ocupacao"] = (agg["noites_ocupadas"] /
+                   (dias_no_mes * unidades_ativas)) * 100
 agg["ADR"] = agg["receita_diarias"] / agg["noites_ocupadas"]
 agg["RevPAR"] = agg["ADR"] * (agg["ocupacao"] / 100)
 
