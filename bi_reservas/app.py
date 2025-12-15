@@ -67,8 +67,9 @@ for col in cols_money:
     df[col] = parse_brl(df[col])
 
 # noites = quantidade (NÃO moeda)
-df["noites_mes"] = df["noites_mes"].str.replace(
-    ",", ".").astype(float).astype(int)
+df["noites_mes"] = df["noites_mes"].astype(
+    str).str.replace(",", ".").astype(float).astype(int)
+
 
 # IDs (inteiros simples, sem nullable)
 df["id_reserva"] = (
