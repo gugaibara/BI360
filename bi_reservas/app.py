@@ -74,12 +74,20 @@ df["noites_mes"] = (
     .astype(float)
 )
 
-# ids
-df["id_reserva"] = pd.to_numeric(
-    df["id_reserva"], errors="coerce").astype("Int64")
-df["id_propriedade"] = pd.to_numeric(
-    df["id_propriedade"], errors="coerce").astype("Int64")
+# IDs (inteiros simples, sem nullable)
+df["id_reserva"] = (
+    df["id_reserva"]
+    .astype(str)
+    .str.replace(r"\D", "", regex=True)
+    .astype(int)
+)
 
+df["id_propriedade"] = (
+    df["id_propriedade"]
+    .astype(str)
+    .str.replace(r"\D", "", regex=True)
+    .astype(int)
+)
 
 # ======================
 # 2. COLUNAS ESPERADAS
