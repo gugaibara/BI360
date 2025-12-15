@@ -42,6 +42,46 @@ def load_data():
 df = load_data()
 
 # ======================
+# 1. NORMALIZA TIPOS (BRL + QUANTIDADE)
+# ======================
+
+
+def parse_brl(series):
+    return (
+        series
+        .astype(str)
+        .str.strip()
+        .str.replace("\u00a0", "", regex=False)      # espaço invisível
+        .str.replace(".", "", regex=False)           # remove milhar
+        .str.replace(",", ".", regex=False)          # decimal BR → US
+        .str.replace(r"[^\d.-]", "", regex=True)     # remove R$, texto
+        .replace("", "0")
+        .astype(float)
+    )
+
+
+# colunas monetárias (BRL)
+cols_money = ["valor_mes", "limpeza_mes"]
+
+for col in cols_money:
+    df[col] = parse_brl(df[col])
+
+# noites = quantidade (NÃO moeda)
+df["noites_mes"] = (
+    df["noites_mes"]
+    .astype(str)
+    .str.replace(",", ".", regex=False)
+    .astype(float)
+)
+
+# ids
+df["id_reserva"] = pd.to_numeric(
+    df["id_reserva"], errors="coerce").astype("Int64")
+df["id_propriedade"] = pd.to_numeric(
+    df["id_propriedade"], errors="coerce").astype("Int64")
+
+
+# ======================
 # 2. COLUNAS ESPERADAS
 # ======================
 # id_reserva
