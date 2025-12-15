@@ -11,6 +11,7 @@ st.set_page_config(page_title="BI Reservas", layout="wide")
 # 1. INPUT DOS DADOS
 # ======================
 
+
 @st.cache_data
 def load_data():
     import gspread
@@ -37,40 +38,33 @@ def load_data():
     df = pd.DataFrame(data)
     return df
 
+
 df = load_data()
 
 # ======================
-# NORMALIZAÇÃO DE TIPOS (CRÍTICO)
+# NORMALIZAÇÃO DE DADOS (BRL)
 # ======================
 
-def parse_br_number(series):
+
+def parse_brl(series):
     return (
         series
         .astype(str)
         .str.strip()
-        .str.replace(r"[^\d,.-]", "", regex=True)  # remove R$, espaços etc
-        .str.replace(".", "", regex=False)         # remove milhar
-        .str.replace(",", ".", regex=False)        # decimal BR → US
-        .replace("", "0")
+        .str.replace(",", ".", regex=False)  # vírgula decimal → ponto
         .astype(float)
     )
+
 
 cols_float = ["valor_mes", "limpeza_mes", "noites_mes"]
 cols_int = ["id_reserva", "id_propriedade"]
 
-# floats (receitas, noites)
 for col in cols_float:
-    df[col] = parse_br_number(df[col]).fillna(0)
+    df[col] = parse_brl(df[col]).fillna(0)
 
-# inteiros (IDs)
 for col in cols_int:
-    df[col] = (
-        df[col]
-        .astype(str)
-        .str.replace(r"[^\d]", "", regex=True)
-        .replace("", "0")
-        .astype(int)
-    )
+    df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)
+
 
 # ======================
 # 2. COLUNAS ESPERADAS
@@ -149,7 +143,8 @@ receita_limpeza = df_f["limpeza_mes"].sum()
 receita_diarias = receita_total - receita_limpeza
 
 # Ocupação (simples, considerando 30 dias)
-unidades_ativas = df_f[["id_propriedade", "unidade"]].drop_duplicates().shape[0]
+unidades_ativas = df_f[["id_propriedade", "unidade"]
+                       ].drop_duplicates().shape[0]
 noites_disponiveis = unidades_ativas * 30
 ocupacao = noites / noites_disponiveis if noites_disponiveis > 0 else 0
 
@@ -167,7 +162,8 @@ periodo = pd.Period(mes, freq="M")
 dias_no_mes = periodo.days_in_month
 
 # ocupação (se for unidade única, cálculo direto; senão, média ponderada)
-unidades_ativas = df_f[["id_propriedade", "unidade"]].drop_duplicates().shape[0]
+unidades_ativas = df_f[["id_propriedade", "unidade"]
+                       ].drop_duplicates().shape[0]
 noites_disponiveis = unidades_ativas * dias_no_mes
 ocupacao = (noites / noites_disponiveis * 100) if noites_disponiveis > 0 else 0
 
@@ -334,7 +330,8 @@ if propriedade != "Todos":
             .dt.strftime("%m-%Y")
         )
 
-        hist_p["receita_diarias"] = hist_p["receita_total"] - hist_p["receita_limpeza"]
+        hist_p["receita_diarias"] = hist_p["receita_total"] - \
+            hist_p["receita_limpeza"]
 
         hist_p["dias_mes"] = (
             pd.to_datetime(hist_p["mes"] + "-01")
@@ -469,7 +466,8 @@ st.subheader("Share de Canal (%)")
 canal_share = (
     df_f.groupby("canal", as_index=False)["valor_mes"].sum()
 )
-canal_share["share"] = canal_share["valor_mes"] / canal_share["valor_mes"].sum()
+canal_share["share"] = canal_share["valor_mes"] / \
+    canal_share["valor_mes"].sum()
 
 fig_share = px.pie(
     canal_share,
@@ -494,7 +492,8 @@ st.subheader("Ranking de Unidades")
 ranking_unidade = agg.copy()
 ranking_unidade["ocupacao"] = ranking_unidade["ocupacao"] * 100
 
-ranking_unidade = ranking_unidade.sort_values("receita_diarias", ascending=False)
+ranking_unidade = ranking_unidade.sort_values(
+    "receita_diarias", ascending=False)
 ranking_unidade = ranking_unidade[[
     "id_propriedade",
     "propriedade",
