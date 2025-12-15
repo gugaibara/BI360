@@ -152,13 +152,6 @@ if unidade != "Todas":
 if canal:
     df_f = df_f[df_f["canal"].isin(canal)]
 
-if propriedade != "Todos":
-    noites_predio = df_f.groupby("propriedade")["noites_mes"].sum()
-    st.write(f"Noites ocupadas no mês {mes} para o prédio {propriedade}:")
-    st.write(noites_predio.get(propriedade, 0))
-else:
-    st.write("Prédio = Todos, sem dados individuais para exibir.")
-
 # ======================
 # 5. MÉTRICAS BASE
 # ======================
