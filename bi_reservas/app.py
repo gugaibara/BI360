@@ -152,6 +152,13 @@ if unidade != "Todas":
 if canal:
     df_f = df_f[df_f["canal"].isin(canal)]
 
+if propriedade != "Todos":
+    noites_predio = df_f.groupby("propriedade")["noites_mes"].sum()
+    st.write(f"Noites ocupadas no mês {mes} para o prédio {propriedade}:")
+    st.write(noites_predio.get(propriedade, 0))
+else:
+    st.write("Prédio = Todos, sem dados individuais para exibir.")
+
 # ======================
 # 5. MÉTRICAS BASE
 # ======================
@@ -433,7 +440,6 @@ agg = (
 )
 
 # métricas calculadas
-agg["noites_ocupadas"] = agg["noites_ocupadas"] / 100
 agg["receita_diarias"] = agg["receita_total"] - agg["receita_limpeza"]
 agg["ocupacao"] = (agg["noites_ocupadas"] / dias_no_mes) * 100
 agg["ADR"] = agg["receita_diarias"] / agg["noites_ocupadas"]
