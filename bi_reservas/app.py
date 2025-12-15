@@ -433,8 +433,9 @@ agg = (
 )
 
 # métricas calculadas
+agg["noites_ocupadas"] = agg["noites_ocupadas"] / 100
 agg["receita_diarias"] = agg["receita_total"] - agg["receita_limpeza"]
-agg["ocupacao"] = (agg["noites_ocupadas"] / dias_no_mes)
+agg["ocupacao"] = (agg["noites_ocupadas"] / dias_no_mes) * 100
 agg["ADR"] = agg["receita_diarias"] / agg["noites_ocupadas"]
 agg["RevPAR"] = agg["ADR"] * (agg["ocupacao"] / 100)
 
