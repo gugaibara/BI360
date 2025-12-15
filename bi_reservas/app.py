@@ -40,6 +40,25 @@ def load_data():
 df = load_data()
 
 # ======================
+# 1.1 AJUSTE DE TIPOS (OBRIGATÓRIO p/ Google Sheets)
+# ======================
+
+cols_float = ["valor_mes", "limpeza_mes", "noites_mes"]
+cols_int = ["id_reserva", "id_propriedade"]
+
+for col in cols_float:
+    df[col] = (
+        df[col]
+        .astype(str)
+        .str.replace(".", "", regex=False)   # remove milhar
+        .str.replace(",", ".", regex=False)  # decimal BR → US
+    )
+    df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+
+for col in cols_int:
+    df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)
+
+# ======================
 # 2. COLUNAS ESPERADAS
 # ======================
 # id_reserva
