@@ -513,7 +513,6 @@ st.plotly_chart(fig_share, use_container_width=True)
 st.subheader("Ranking de Unidades")
 
 ranking_unidade = agg.copy()
-ranking_unidade["ocupacao"] = ranking_unidade["ocupacao"] * 100
 
 ranking_unidade = ranking_unidade.sort_values(
     "receita_diarias", ascending=False)
@@ -563,8 +562,6 @@ ranking_predio = (
         RevPAR_medio=("RevPAR", "mean")
     )
 )
-
-ranking_predio["ocupacao_media"] = ranking_predio["ocupacao_media"] * 100
 
 ranking_predio = ranking_predio.sort_values("receita_diarias", ascending=False)
 ranking_predio.insert(0, "rank", range(1, len(ranking_predio) + 1))
