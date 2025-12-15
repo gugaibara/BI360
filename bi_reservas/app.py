@@ -40,23 +40,37 @@ def load_data():
 df = load_data()
 
 # ======================
-# 1.1 AJUSTE DE TIPOS (OBRIGATÓRIO p/ Google Sheets)
+# NORMALIZAÇÃO DE TIPOS (CRÍTICO)
 # ======================
+
+def parse_br_number(series):
+    return (
+        series
+        .astype(str)
+        .str.strip()
+        .str.replace(r"[^\d,.-]", "", regex=True)  # remove R$, espaços etc
+        .str.replace(".", "", regex=False)         # remove milhar
+        .str.replace(",", ".", regex=False)        # decimal BR → US
+        .replace("", "0")
+        .astype(float)
+    )
 
 cols_float = ["valor_mes", "limpeza_mes", "noites_mes"]
 cols_int = ["id_reserva", "id_propriedade"]
 
+# floats (receitas, noites)
 for col in cols_float:
+    df[col] = parse_br_number(df[col]).fillna(0)
+
+# inteiros (IDs)
+for col in cols_int:
     df[col] = (
         df[col]
         .astype(str)
-        .str.replace(".", "", regex=False)   # remove milhar
-        .str.replace(",", ".", regex=False)  # decimal BR → US
+        .str.replace(r"[^\d]", "", regex=True)
+        .replace("", "0")
+        .astype(int)
     )
-    df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
-
-for col in cols_int:
-    df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)
 
 # ======================
 # 2. COLUNAS ESPERADAS
