@@ -106,10 +106,20 @@ df["id_propriedade"] = (
 
 col1, col2, col3, col4, col5 = st.columns(5)
 
+# Botão para limpar filtros
+if st.button("Limpar filtros"):
+    st.session_state.partner = "Todos"
+    st.session_state.mes = sorted(df["mes"].unique())[0]
+    st.session_state.propriedade = "Todos"
+    st.session_state.unidade = "Todas"
+    st.session_state.canal = sorted(df["canal"].unique())
+    st.experimental_rerun()
+
 with col1:
     partner = st.selectbox(
         "Partner",
-        ["Todos"] + sorted(df["partner"].unique())
+        ["Todos"] + sorted(df["partner"].unique()),
+        key="partner"
     )
 
 if partner != "Todos":
@@ -123,12 +133,18 @@ else:
     predios_disponiveis = sorted(df["propriedade"].unique())
 
 with col2:
-    mes = st.selectbox("Mês", sorted(df["mes"].unique()))
+    mes = st.selectbox(
+        "Mês",
+        sorted(df["mes"].unique()),
+        index=0,
+        key="mes"
+    )
 
 with col3:
     propriedade = st.selectbox(
         "Prédio",
-        ["Todos"] + predios_disponiveis
+        ["Todos"] + predios_disponiveis,
+        key="propriedade"
     )
 
 if propriedade != "Todos":
@@ -156,7 +172,8 @@ with col4:
     if propriedade != "Todos":
         unidade = st.selectbox(
             "Unidade",
-            ["Todas"] + unidades_disponiveis
+            ["Todas"] + unidades_disponiveis,
+            key="unidade"
         )
     else:
         unidade = "Todas"
@@ -166,7 +183,8 @@ with col5:
     canal = st.multiselect(
         "Canal",
         sorted(df["canal"].unique()),
-        default=sorted(df["canal"].unique())
+        default=sorted(df["canal"].unique()),
+        key="canal"
     )
 
 # ======================
@@ -188,6 +206,7 @@ if unidade != "Todas":
 
 if canal:
     df_f = df_f[df_f["canal"].isin(canal)]
+
 
 # ======================
 # 5. MÉTRICAS BASE
