@@ -112,25 +112,51 @@ with col1:
         ["Todos"] + sorted(df["partner"].unique())
     )
 
+if partner != "Todos":
+    predios_disponiveis = (
+        df[df["partner"] == partner]["propriedade"]
+        .drop_duplicates()
+        .sort_values()
+        .tolist()
+    )
+else:
+    predios_disponiveis = sorted(df["propriedade"].unique())
+
 with col2:
     mes = st.selectbox("Mês", sorted(df["mes"].unique()))
 
 with col3:
     propriedade = st.selectbox(
         "Prédio",
-        ["Todos"] + sorted(df["propriedade"].unique())
+        ["Todos"] + predios_disponiveis
     )
+
+if propriedade != "Todos":
+    if partner != "Todos":
+        unidades_disponiveis = (
+            df[
+                (df["partner"] == partner) &
+                (df["propriedade"] == propriedade)
+            ]["unidade"]
+            .drop_duplicates()
+            .sort_values()
+            .tolist()
+        )
+    else:
+        unidades_disponiveis = (
+            df[df["propriedade"] == propriedade]["unidade"]
+            .drop_duplicates()
+            .sort_values()
+            .tolist()
+        )
+else:
+    unidades_disponiveis = []
 
 with col4:
     if propriedade != "Todos":
-        unidades_disponiveis = (
-            df[df["propriedade"] == propriedade]["unidade"]
-            .sort_values()
-            .unique()
-        )
         unidade = st.selectbox(
             "Unidade",
-            ["Todas"] + list(unidades_disponiveis)
+            ["Todas"] + unidades_disponiveis
         )
     else:
         unidade = "Todas"
@@ -173,21 +199,11 @@ receita_total = df_f["valor_mes"].sum()
 receita_limpeza = df_f["limpeza_mes"].sum()
 receita_diarias = receita_total - receita_limpeza
 
-periodo = pd.Period(mes, freq="M")
-dias_no_mes = periodo.days_in_month
-
+# Ocupação (simples, considerando 30 dias)
 unidades_ativas = df_f[["id_propriedade", "unidade"]
                        ].drop_duplicates().shape[0]
-noites_disponiveis = unidades_ativas * dias_no_mes
-ocupacao = (noites / noites_disponiveis * 100) if noites_disponiveis > 0 else 0
-
-k1, k2, k3, k4, k5 = st.columns(5)
-
-k1.metric("Reservas", reservas)
-k2.metric("Ocupação (%)", f"{ocupacao:.1f}%")
-k3.metric("Receita Total", f"R$ {receita_total:,.2f}")
-k4.metric("Receita Diárias", f"R$ {receita_diarias:,.2f}")
-k5.metric("Receita Limpeza", f"R$ {receita_limpeza:,.2f}")
+noites_disponiveis = unidades_ativas * 30
+ocupacao = noites / noites_disponiveis if noites_disponiveis > 0 else 0
 
 # ======================
 # 6. KPIs
@@ -222,10 +238,14 @@ k5.metric("Receita Limpeza", f"R$ {receita_limpeza:,.2f}")
 
 st.divider()
 
+# Cabeçalho bonito quando unidade selecionada
 if unidade != "Todas":
-    st.markdown(f"### 🏠 {propriedade} — Unidade **{unidade}**")
+    st.markdown(
+        f"### 🏠 {propriedade} — Unidade **{unidade}**"
+    )
     st.caption(f"Resumo operacional da unidade no mês {mes}")
 
+# se estiver filtrando unidade, não exibe gráfico agregado
 if unidade == "Todas":
     if propriedade == "Todos":
         grafico_df = (
