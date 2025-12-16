@@ -240,86 +240,92 @@ if unidade == "Todas":
 # ======================
 
 if propriedade != "Todos" and unidade != "Todas":
+    ver_hist_unidade = st.toggle(
+        "📊 Ver histórico mensal do prédio",
+        value=False
+    )
 
-    st.divider()
-    st.subheader(f"📊 Histórico Mensal — {propriedade} | Unidade {unidade}")
+    if ver_hist_unidade:
+        st.divider()
+        st.subheader(f"📊 Histórico Mensal — {propriedade} | Unidade {unidade}")
 
-    hist = (
-        df[
-            (df["propriedade"] == propriedade) &
-            (df["unidade"] == unidade)
-        ]
-        .groupby("mes", as_index=False)
-        .agg(
-            noites_ocupadas=("noites_mes", "sum"),
-            receita_total=("valor_mes", "sum"),
-            receita_limpeza=("limpeza_mes", "sum")
+        hist = (
+            df[
+                (df["propriedade"] == propriedade) &
+                (df["unidade"] == unidade)
+            ]
+            .groupby("mes", as_index=False)
+            .agg(
+                noites_ocupadas=("noites_mes", "sum"),
+                receita_total=("valor_mes", "sum"),
+                receita_limpeza=("limpeza_mes", "sum")
+            )
+            .sort_values("mes")
         )
-        .sort_values("mes")
-    )
 
-    hist["mes_fmt"] = (
-        pd.to_datetime(hist["mes"] + "-01")
-        .dt.strftime("%m-%Y")
-    )
+        hist["mes_fmt"] = (
+            pd.to_datetime(hist["mes"] + "-01")
+            .dt.strftime("%m-%Y")
+        )
 
-    hist["receita_diarias"] = hist["receita_total"] - hist["receita_limpeza"]
+        hist["receita_diarias"] = hist["receita_total"] - \
+            hist["receita_limpeza"]
 
-    hist["dias_mes"] = (
-        pd.to_datetime(hist["mes"] + "-01")
-        .dt.days_in_month
-    )
+        hist["dias_mes"] = (
+            pd.to_datetime(hist["mes"] + "-01")
+            .dt.days_in_month
+        )
 
-    hist["ocupacao"] = (
-        hist["noites_ocupadas"] / hist["dias_mes"] * 100
-    )
+        hist["ocupacao"] = (
+            hist["noites_ocupadas"] / hist["dias_mes"] * 100
+        )
 
-    hist["ADR"] = hist["receita_diarias"] / hist["noites_ocupadas"]
+        hist["ADR"] = hist["receita_diarias"] / hist["noites_ocupadas"]
 
-    col_h1, col_h2 = st.columns(2)
+        col_h1, col_h2 = st.columns(2)
 
-    with col_h1:
-        fig_rec = px.bar(
+        with col_h1:
+            fig_rec = px.bar(
+                hist,
+                x="mes_fmt",
+                y="receita_total",
+                title="Receita Total (R$) — Fechamento Mensal",
+                text_auto=".2s"
+            )
+
+            st.plotly_chart(fig_rec, use_container_width=True)
+
+        with col_h2:
+            fig_occ = px.bar(
+                hist,
+                x="mes_fmt",
+                y="ocupacao",
+                title="Ocupação (%) — Fechamento Mensal",
+                text_auto=".1f"
+            )
+            st.plotly_chart(fig_occ, use_container_width=True)
+
+        fig_adr = px.bar(
             hist,
             x="mes_fmt",
-            y="receita_total",
-            title="Receita Total (R$) — Fechamento Mensal",
-            text_auto=".2s"
+            y="ADR",
+            title="ADR (R$) — Fechamento Mensal",
+            text_auto=".2f"
         )
 
-        st.plotly_chart(fig_rec, use_container_width=True)
+        st.plotly_chart(fig_adr, use_container_width=True)
 
-    with col_h2:
-        fig_occ = px.bar(
+        hist["RevPAR"] = hist["ADR"] * (hist["ocupacao"] / 100)
+
+        fig_revpar = px.bar(
             hist,
             x="mes_fmt",
-            y="ocupacao",
-            title="Ocupação (%) — Fechamento Mensal",
-            text_auto=".1f"
+            y="RevPAR",
+            title="RevPAR (R$) — Fechamento Mensal",
+            text_auto=".2f"
         )
-        st.plotly_chart(fig_occ, use_container_width=True)
 
-    fig_adr = px.bar(
-        hist,
-        x="mes_fmt",
-        y="ADR",
-        title="ADR (R$) — Fechamento Mensal",
-        text_auto=".2f"
-    )
-
-    st.plotly_chart(fig_adr, use_container_width=True)
-
-    hist["RevPAR"] = hist["ADR"] * (hist["ocupacao"] / 100)
-
-    fig_revpar = px.bar(
-        hist,
-        x="mes_fmt",
-        y="RevPAR",
-        title="RevPAR (R$) — Fechamento Mensal",
-        text_auto=".2f"
-    )
-
-    st.plotly_chart(fig_revpar, use_container_width=True)
+        st.plotly_chart(fig_revpar, use_container_width=True)
 
 # ======================
 # 7.2 HISTÓRICO MENSAL (BARRAS) — PRÉDIO
