@@ -241,7 +241,7 @@ if unidade == "Todas":
 
 if propriedade != "Todos" and unidade != "Todas":
     ver_hist_unidade = st.toggle(
-        "📊 Ver histórico mensal do prédio",
+        "📊 Ver histórico mensal da unidade",
         value=False
     )
 
