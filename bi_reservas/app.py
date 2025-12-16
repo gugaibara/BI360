@@ -125,7 +125,7 @@ if st.button("Limpar filtros"):
     st.session_state.propriedade = "Todos"
     st.session_state.unidade = "Todas"
     st.session_state.canal = sorted(df["canal"].unique())
-    st.experimental_rerun()
+    st.session_state.clear()
 
 with col1:
     partner = st.selectbox(
