@@ -106,6 +106,18 @@ df["id_propriedade"] = (
 
 col1, col2, col3, col4, col5 = st.columns(5)
 
+# Inicializa session_state com valores padrão, se ainda não existirem
+if "partner" not in st.session_state:
+    st.session_state.partner = "Todos"
+if "mes" not in st.session_state:
+    st.session_state.mes = sorted(df["mes"].unique())[0]
+if "propriedade" not in st.session_state:
+    st.session_state.propriedade = "Todos"
+if "unidade" not in st.session_state:
+    st.session_state.unidade = "Todas"
+if "canal" not in st.session_state:
+    st.session_state.canal = sorted(df["canal"].unique())
+
 # Botão para limpar filtros
 if st.button("Limpar filtros"):
     st.session_state.partner = "Todos"
@@ -113,12 +125,14 @@ if st.button("Limpar filtros"):
     st.session_state.propriedade = "Todos"
     st.session_state.unidade = "Todas"
     st.session_state.canal = sorted(df["canal"].unique())
-    st.session_state.clear()
+    st.experimental_rerun()
 
 with col1:
     partner = st.selectbox(
         "Partner",
         ["Todos"] + sorted(df["partner"].unique()),
+        index=(["Todos"] + sorted(df["partner"].unique())
+               ).index(st.session_state.partner),
         key="partner"
     )
 
@@ -136,7 +150,7 @@ with col2:
     mes = st.selectbox(
         "Mês",
         sorted(df["mes"].unique()),
-        index=0,
+        index=sorted(df["mes"].unique()).index(st.session_state.mes),
         key="mes"
     )
 
@@ -144,6 +158,7 @@ with col3:
     propriedade = st.selectbox(
         "Prédio",
         ["Todos"] + predios_disponiveis,
+        index=(["Todos"] + predios_disponiveis).index(st.session_state.propriedade),
         key="propriedade"
     )
 
@@ -173,6 +188,7 @@ with col4:
         unidade = st.selectbox(
             "Unidade",
             ["Todas"] + unidades_disponiveis,
+            index=(["Todas"] + unidades_disponiveis).index(st.session_state.unidade),
             key="unidade"
         )
     else:
@@ -183,7 +199,7 @@ with col5:
     canal = st.multiselect(
         "Canal",
         sorted(df["canal"].unique()),
-        default=sorted(df["canal"].unique()),
+        default=st.session_state.canal,
         key="canal"
     )
 
