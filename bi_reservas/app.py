@@ -173,11 +173,21 @@ receita_total = df_f["valor_mes"].sum()
 receita_limpeza = df_f["limpeza_mes"].sum()
 receita_diarias = receita_total - receita_limpeza
 
-# Ocupação (simples, considerando 30 dias)
+periodo = pd.Period(mes, freq="M")
+dias_no_mes = periodo.days_in_month
+
 unidades_ativas = df_f[["id_propriedade", "unidade"]
                        ].drop_duplicates().shape[0]
-noites_disponiveis = unidades_ativas * 30
-ocupacao = noites / noites_disponiveis if noites_disponiveis > 0 else 0
+noites_disponiveis = unidades_ativas * dias_no_mes
+ocupacao = (noites / noites_disponiveis * 100) if noites_disponiveis > 0 else 0
+
+k1, k2, k3, k4, k5 = st.columns(5)
+
+k1.metric("Reservas", reservas)
+k2.metric("Ocupação (%)", f"{ocupacao:.1f}%")
+k3.metric("Receita Total", f"R$ {receita_total:,.2f}")
+k4.metric("Receita Diárias", f"R$ {receita_diarias:,.2f}")
+k5.metric("Receita Limpeza", f"R$ {receita_limpeza:,.2f}")
 
 # ======================
 # 6. KPIs
@@ -212,14 +222,10 @@ k5.metric("Receita Limpeza", f"R$ {receita_limpeza:,.2f}")
 
 st.divider()
 
-# Cabeçalho bonito quando unidade selecionada
 if unidade != "Todas":
-    st.markdown(
-        f"### 🏠 {propriedade} — Unidade **{unidade}**"
-    )
+    st.markdown(f"### 🏠 {propriedade} — Unidade **{unidade}**")
     st.caption(f"Resumo operacional da unidade no mês {mes}")
 
-# se estiver filtrando unidade, não exibe gráfico agregado
 if unidade == "Todas":
     if propriedade == "Todos":
         grafico_df = (
