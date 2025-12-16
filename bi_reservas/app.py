@@ -12,7 +12,7 @@ st.set_page_config(page_title="BI Reservas", layout="wide")
 # ======================
 
 
-@st.cache_data
+@st.cache_data(ttl=3600)
 def load_data():
     import gspread
     from google.oauth2.service_account import Credentials
@@ -98,24 +98,30 @@ df["id_propriedade"] = (
 # valor_mes
 # limpeza_mes
 # mes (YYYY-MM)
+# partner
 
 # ======================
 # 3. FILTROS
 # ======================
 
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
-    mes = st.selectbox("Mês", sorted(df["mes"].unique()))
+    partner = st.selectbox(
+        "Partner",
+        ["Todos"] + sorted(df["partner"].unique())
+    )
 
 with col2:
+    mes = st.selectbox("Mês", sorted(df["mes"].unique()))
+
+with col3:
     propriedade = st.selectbox(
         "Prédio",
         ["Todos"] + sorted(df["propriedade"].unique())
     )
 
-# filtro de unidade (só habilita quando prédio != Todos)
-with col3:
+with col4:
     if propriedade != "Todos":
         unidades_disponiveis = (
             df[df["propriedade"] == propriedade]["unidade"]
@@ -130,7 +136,7 @@ with col3:
         unidade = "Todas"
         st.selectbox("Unidade", ["Selecione um prédio"], disabled=True)
 
-with col4:
+with col5:
     canal = st.multiselect(
         "Canal",
         sorted(df["canal"].unique()),
@@ -141,7 +147,12 @@ with col4:
 # 4. APLICA FILTROS
 # ======================
 
-df_f = df[df["mes"] == mes]
+df_f = df.copy()
+
+if partner != "Todos":
+    df_f = df_f[df_f["partner"] == partner]
+
+df_f = df_f[df_f["mes"] == mes]
 
 if propriedade != "Todos":
     df_f = df_f[df_f["propriedade"] == propriedade]
