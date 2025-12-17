@@ -41,6 +41,8 @@ def load_data():
 
 df = load_data()
 
+df["mes_dt"] = pd.to_datetime(df["mes"] + "-01")
+
 # ======================
 # 1. NORMALIZA TIPOS (BRL + QUANTIDADE)
 # ======================
@@ -122,8 +124,15 @@ if partner != "Todos":
 else:
     predios_disponiveis = sorted(df["propriedade"].unique())
 
+meses_ordenados = (
+    df[["mes", "mes_dt"]]
+    .drop_duplicates()
+    .sort_values("mes_dt")["mes"]
+    .tolist()
+)
+
 with col2:
-    mes = st.selectbox("Mês", sorted(df["mes"].unique()))
+    mes = st.selectbox("Mês", meses_ordenados)
 
 with col3:
     propriedade = st.selectbox(
@@ -297,7 +306,7 @@ if propriedade != "Todos" and unidade != "Todas":
                 receita_total=("valor_mes", "sum"),
                 receita_limpeza=("limpeza_mes", "sum")
             )
-            .sort_values("mes")
+            .sort_values("mes_dt")
         )
 
         hist["mes_fmt"] = (
@@ -385,7 +394,7 @@ if propriedade != "Todos":
                 receita_limpeza=("limpeza_mes", "sum"),
                 unidades=("unidade", "nunique")
             )
-            .sort_values("mes")
+            .sort_values("mes_dt")
         )
 
         hist_p["mes_fmt"] = (
