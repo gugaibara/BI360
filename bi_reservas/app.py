@@ -300,7 +300,7 @@ if propriedade != "Todos" and unidade != "Todas":
                 (df["propriedade"] == propriedade) &
                 (df["unidade"] == unidade)
             ]
-            .groupby("mes", as_index=False)
+            .groupby(["mes", "mes_dt"], as_index=False)
             .agg(
                 noites_ocupadas=("noites_mes", "sum"),
                 receita_total=("valor_mes", "sum"),
@@ -387,7 +387,7 @@ if propriedade != "Todos":
     if ver_hist_predio:
         hist_p = (
             df[df["propriedade"] == propriedade]
-            .groupby("mes", as_index=False)
+            .groupby(["mes", "mes_dt"], as_index=False)
             .agg(
                 noites_ocupadas=("noites_mes", "sum"),
                 receita_total=("valor_mes", "sum"),
