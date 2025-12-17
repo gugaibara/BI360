@@ -12,7 +12,7 @@ st.set_page_config(page_title="BI Reservas", layout="wide")
 # ======================
 
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=3600)
 def load_data():
     import gspread
     from google.oauth2.service_account import Credentials
