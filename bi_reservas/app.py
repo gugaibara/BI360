@@ -368,40 +368,57 @@ if propriedade != "Todos" and unidade != "Todas":
         # 🔥 Cálculo do NÍVEL DA UNIDADE
         # =============================
 
-        # Receita atual = soma do período filtrado (histórico já está agregado)
-        receita_atual = hist["receita_total"].sum()
+ # Receita atual = soma do período filtrado (histórico já está agregado)
+receita_atual = hist["receita_total"].sum()
 
-        # Receita esperada (procura no De-para pelo nome da unidade)
-        meta_linha = df_meta.loc[df_meta["unidade"]
-                                 == unidade, "receita_esperada"]
+# Receita esperada (procura no De-para pelo nome da unidade)
+meta_linha = df_meta.loc[df_meta["unidade"] == unidade, "receita_esperada"]
 
-        if not meta_linha.empty:
-            receita_esperada = float(meta_linha.iloc[0])
-            atingimento = receita_atual / receita_esperada
+if not meta_linha.empty:
+    valor_bruto = str(meta_linha.iloc[0]).strip()
 
-            # Classificação do nível
-            if atingimento < 0.5:
-                nivel = 1
-            elif atingimento < 0.85:
-                nivel = 2
-            elif atingimento < 1:
-                nivel = 3
-            elif atingimento < 1.15:
-                nivel = 4
-            else:
-                nivel = 5
+    # normaliza (remove R$, pontos, troca vírgula...)
+    valor_bruto = (
+        valor_bruto.replace("R$", "")
+        .replace(".", "")
+        .replace(",", ".")
+    )
 
-            st.divider()
-            st.subheader("📌 Indicador de Performance da Unidade")
+    # tenta converter
+    try:
+        receita_esperada = float(valor_bruto)
+    except ValueError:
+        receita_esperada = None
 
-            st.metric(
-                label="Nível da Unidade",
-                value=f"Nível {nivel}",
-                delta=f"Atingimento: {atingimento:.2%}"
-            )
+    if receita_esperada and receita_esperada > 0:
+        atingimento = receita_atual / receita_esperada
 
+        # Classificação do nível
+        if atingimento < 0.5:
+            nivel = 1
+        elif atingimento < 0.85:
+            nivel = 2
+        elif atingimento < 1:
+            nivel = 3
+        elif atingimento < 1.15:
+            nivel = 4
         else:
-            st.warning("⚠️ Unidade não encontrada no De-Para de metas.")
+            nivel = 5
+
+        st.divider()
+        st.subheader("📌 Indicador de Performance da Unidade")
+
+        st.metric(
+            label="Nível da Unidade",
+            value=f"Nível {nivel}",
+            delta=f"Atingimento: {atingimento:.2%}"
+        )
+
+    else:
+        st.warning("⚠️ Meta inválida ou não numérica para esta unidade.")
+
+else:
+    st.warning("⚠️ Unidade não encontrada na aba 'Base Níveis'.")
 
 # ======================
 # 7.2 HISTÓRICO MENSAL (BARRAS) — PRÉDIO
