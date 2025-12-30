@@ -1,5 +1,4 @@
 # app.py
-# BI de Reservas - Streamlit (versão aprimorada)
 
 import pandas as pd
 import streamlit as st
@@ -256,18 +255,7 @@ if unidade != "Todas":
 
 # se estiver filtrando unidade, não exibe gráfico agregado
 if unidade == "Todas":
-    if propriedade == "Todos":
-        grafico_df = (
-            df_f.groupby(["id_propriedade", "propriedade"], as_index=False)
-            .agg(receita=("valor_mes", "sum"))
-        )
-        fig = px.bar(
-            grafico_df,
-            x="propriedade",
-            y="receita",
-            title="Receita por Prédio"
-        )
-    else:
+    if propriedade != "Todos":
         grafico_df = (
             df_f.groupby("unidade", as_index=False)
             .agg(receita=("valor_mes", "sum"))
@@ -541,13 +529,27 @@ canal_share = (
 canal_share["share"] = canal_share["valor_mes"] / \
     canal_share["valor_mes"].sum()
 
+cores_canais = {
+    "Airbnb": "#FF0000",        # vermelho
+    "Booking.com": "#0217FF",   # azul
+    "Direct": "#00CC44",        # verde (exemplo)
+    "Site": "#FF9900",          # laranja (exemplo)
+    "Expedia": "#EEFF00",      # roxo (exemplo)
+}
+
+# Adiciona uma coluna com cor baseada no canal
+canal_share["cor"] = canal_share["canal"].map(cores_canais)
+
 fig_share = px.pie(
     canal_share,
     names="canal",
     values="valor_mes",
     title="Participação de Receita por Canal",
-    hole=0.4
+    hole=0.4,
+    color="canal",
+    color_discrete_map=cores_canais
 )
+
 fig_share.update_traces(
     textinfo="label+percent",
     hovertemplate="Canal: %{label}<br>Receita: R$ %{value:,.2f}<br>Share: %{percent}"
@@ -564,12 +566,14 @@ st.subheader("Ranking de Unidades")
 ranking_unidade = agg.copy()
 
 ranking_unidade = ranking_unidade.sort_values(
-    "receita_diarias", ascending=False)
+    "receita_total", ascending=False)
 ranking_unidade = ranking_unidade[[
     "id_propriedade",
     "propriedade",
     "unidade",
+    "receita_total",
     "receita_diarias",
+    "receita_limpeza",
     "ocupacao",
     "ADR",
     "RevPAR"
@@ -605,14 +609,16 @@ st.subheader("Ranking de Prédios")
 ranking_predio = (
     agg.groupby(["id_propriedade", "propriedade"], as_index=False)
     .agg(
+        receita_total=("receita_total", "sum"),
         receita_diarias=("receita_diarias", "sum"),
+        receita_limpeza=("receita_limpeza", "sum"),
         ocupacao_media=("ocupacao", "mean"),
         ADR_medio=("ADR", "mean"),
         RevPAR_medio=("RevPAR", "mean")
     )
 )
 
-ranking_predio = ranking_predio.sort_values("receita_diarias", ascending=False)
+ranking_predio = ranking_predio.sort_values("receita_total", ascending=False)
 ranking_predio.insert(0, "rank", range(1, len(ranking_predio) + 1))
 
 st.dataframe(
