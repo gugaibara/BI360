@@ -313,14 +313,11 @@ if propriedade != "Todos" and unidade != "Todas":
             .dt.days_in_month
         )
 
-        hist["ocupacao"] = (
-            hist["noites_ocupadas"] / hist["dias_mes"] * 100
-        )
-
+        hist["ocupacao"] = (hist["noites_ocupadas"] / hist["dias_mes"] * 100)
         hist["ADR"] = hist["receita_diarias"] / hist["noites_ocupadas"]
+        hist["RevPAR"] = hist["ADR"] * (hist["ocupacao"] / 100)
 
         col_h1, col_h2 = st.columns(2)
-
         with col_h1:
             fig_rec = px.bar(
                 hist,
@@ -329,7 +326,6 @@ if propriedade != "Todos" and unidade != "Todas":
                 title="Receita Total (R$) — Fechamento Mensal",
                 text_auto=".2s"
             )
-
             st.plotly_chart(fig_rec, use_container_width=True)
 
         with col_h2:
@@ -349,10 +345,7 @@ if propriedade != "Todos" and unidade != "Todas":
             title="ADR (R$) — Fechamento Mensal",
             text_auto=".2f"
         )
-
         st.plotly_chart(fig_adr, use_container_width=True)
-
-        hist["RevPAR"] = hist["ADR"] * (hist["ocupacao"] / 100)
 
         fig_revpar = px.bar(
             hist,
@@ -361,61 +354,60 @@ if propriedade != "Todos" and unidade != "Todas":
             title="RevPAR (R$) — Fechamento Mensal",
             text_auto=".2f"
         )
-
         st.plotly_chart(fig_revpar, use_container_width=True)
 
         # =============================
-        # 🔥 Cálculo do NÍVEL DA UNIDADE
+        # 🔥 HISTÓRICO DE NÍVEL DA UNIDADE
         # =============================
 
-        # Receita esperada (procura no De-para pelo nome da unidade)
         meta_linha = df_meta.loc[df_meta["unidade"]
                                  == unidade, "receita_esperada"]
 
         if not meta_linha.empty:
             valor_bruto = str(meta_linha.iloc[0]).strip()
-
-            # normaliza (remove R$, pontos, troca vírgula...)
             valor_bruto = (
                 valor_bruto.replace("R$", "")
                 .replace(".", "")
                 .replace(",", ".")
             )
 
-            # tenta converter
             try:
                 receita_esperada = float(valor_bruto)
             except ValueError:
                 receita_esperada = None
 
             if receita_esperada and receita_esperada > 0:
-                atingimento = receita_diarias / receita_esperada
 
-                # Classificação do nível
-                if atingimento < 0.5:
-                    nivel = 1
-                elif atingimento < 0.85:
-                    nivel = 2
-                elif atingimento < 1:
-                    nivel = 3
-                elif atingimento < 1.15:
-                    nivel = 4
-                else:
-                    nivel = 5
+                def classificar_nivel(x):
+                    if x < 0.5:
+                        return 1
+                    elif x < 0.85:
+                        return 2
+                    elif x < 1:
+                        return 3
+                    elif x < 1.15:
+                        return 4
+                    else:
+                        return 5
+
+                hist["atingimento"] = hist["receita_diarias"] / receita_esperada
+                hist["nivel"] = hist["atingimento"].apply(classificar_nivel)
 
                 st.divider()
-                st.subheader("📌 Indicador de Performance da Unidade")
+                st.subheader("📊 Histórico de Níveis por Mês")
 
-                st.metric(
-                    label="Nível da Unidade",
-                    value=f"Nível {nivel}",
-                    delta=f"Atingimento: {atingimento:.2%}"
+                fig_nivel = px.bar(
+                    hist,
+                    x="mes_fmt",
+                    y="nivel",
+                    title="Nível por Mês — Indicador de Performance",
+                    text_auto=True
                 )
+                st.plotly_chart(fig_nivel, use_container_width=True)
 
             else:
                 st.warning(
                     "⚠️ Meta inválida ou não numérica para esta unidade.")
-
         else:
             st.warning("⚠️ Unidade não encontrada na aba 'Base Níveis'.")
 
