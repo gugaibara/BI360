@@ -254,18 +254,17 @@ if unidade != "Todas":
     st.caption(f"Resumo operacional da unidade no mês {mes}")
 
 # se estiver filtrando unidade, não exibe gráfico agregado
-if unidade == "Todas":
-    if propriedade != "Todos":
-        grafico_df = (
-            df_f.groupby("unidade", as_index=False)
-            .agg(receita=("valor_mes", "sum"))
-        )
-        fig = px.bar(
-            grafico_df,
-            x="unidade",
-            y="receita",
-            title=f"Receita por Unidade – {propriedade}"
-        )
+if unidade == "Todas" and propriedade != "Todos":
+    grafico_df = (
+        df_f.groupby("unidade", as_index=False)
+        .agg(receita=("valor_mes", "sum"))
+    )
+    fig = px.bar(
+        grafico_df,
+        x="unidade",
+        y="receita",
+        title=f"Receita por Unidade – {propriedade}"
+    )
 
     st.plotly_chart(fig, use_container_width=True)
 
