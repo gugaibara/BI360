@@ -25,20 +25,20 @@ def load_data():
 
     gc = gspread.authorize(creds)
 
-    sh = gc.open_by_key(
-        st.secrets["google_sheets"]["spreadsheet_id"]
-    )
+    sh = gc.open_by_key(st.secrets["google_sheets"]["spreadsheet_id"])
 
-    ws = sh.worksheet(
-        st.secrets["google_sheets"]["sheet_name"]
-    )
+    # 📌 Reservas (principal)
+    ws_res = sh.worksheet(st.secrets["google_sheets"]["sheet_name"])
+    df_reservas = pd.DataFrame(ws_res.get_all_records())
 
-    data = ws.get_all_records()
-    df = pd.DataFrame(data)
-    return df
+    # 📌 De-para de metas (crie essa aba no Sheets)
+    ws_meta = sh.worksheet("Base Níveis")
+    df_meta = pd.DataFrame(ws_meta.get_all_records())
+
+    return df_reservas, df_meta
 
 
-df = load_data()
+df, df_meta = load_data()
 
 df["mes_dt"] = pd.to_datetime(df["mes"] + "-01")
 
@@ -360,6 +360,45 @@ if propriedade != "Todos" and unidade != "Todas":
 
         st.plotly_chart(fig_revpar, use_container_width=True)
 
+        # =============================
+        # 🔥 Cálculo do NÍVEL DA UNIDADE
+        # =============================
+
+        # Receita atual = soma do período filtrado (histórico já está agregado)
+        receita_atual = hist["receita_total"].sum()
+
+        # Receita esperada (procura no De-para pelo nome da unidade)
+        meta_linha = df_meta.loc[df_meta["unidade"]
+                                 == unidade, "receita_esperada"]
+
+        if not meta_linha.empty:
+            receita_esperada = float(meta_linha.iloc[0])
+            atingimento = receita_atual / receita_esperada
+
+            # Classificação do nível
+            if atingimento < 0.5:
+                nivel = 1
+            elif atingimento < 0.85:
+                nivel = 2
+            elif atingimento < 1:
+                nivel = 3
+            elif atingimento < 1.15:
+                nivel = 4
+            else:
+                nivel = 5
+
+            st.divider()
+            st.subheader("📌 Indicador de Performance da Unidade")
+
+            st.metric(
+                label="Nível da Unidade",
+                value=f"Nível {nivel}",
+                delta=f"Atingimento: {atingimento:.2%}"
+            )
+
+        else:
+            st.warning("⚠️ Unidade não encontrada no De-Para de metas.")
+
 # ======================
 # 7.2 HISTÓRICO MENSAL (BARRAS) — PRÉDIO
 # ======================
@@ -529,11 +568,12 @@ canal_share["share"] = canal_share["valor_mes"] / \
     canal_share["valor_mes"].sum()
 
 cores_canais = {
-    "Airbnb": "#FF0000",        # vermelho
-    "Booking.com": "#0217FF",   # azul
-    "Direct": "#00CC44",        # verde (exemplo)
-    "Site": "#FF9900",          # laranja (exemplo)
-    "Expedia": "#EEFF00",      # roxo (exemplo)
+    "Airbnb": "#FF00CC",
+    "Booking.com": "#0217FF",
+    "Direct": "#02812C",
+    "Direct_Partner": "#00CC7E",
+    "Site": "#FF0000",
+    "Expedia": "#EEFF00"
 }
 
 # Adiciona uma coluna com cor baseada no canal
@@ -588,8 +628,16 @@ st.dataframe(
             "Ocupação (%)",
             format="%.1f"
         ),
+        "receita_total": st.column_config.NumberColumn(
+            "Receita Total",
+            format="R$ %.2f"
+        ),
         "receita_diarias": st.column_config.NumberColumn(
             "Receita Diárias",
+            format="R$ %.2f"
+        ),
+        "receita_limpeza": st.column_config.NumberColumn(
+            "Receita Limpeza",
             format="R$ %.2f"
         ),
         "ADR": st.column_config.NumberColumn(
@@ -628,8 +676,16 @@ st.dataframe(
             "Ocupação Média (%)",
             format="%.1f"
         ),
+        "receita_total": st.column_config.NumberColumn(
+            "Receita Total",
+            format="R$ %.2f"
+        ),
         "receita_diarias": st.column_config.NumberColumn(
             "Receita Diárias",
+            format="R$ %.2f"
+        ),
+        "receita_limpeza": st.column_config.NumberColumn(
+            "Receita Limpeza",
             format="R$ %.2f"
         ),
         "ADR_medio": st.column_config.NumberColumn(
