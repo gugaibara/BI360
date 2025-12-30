@@ -368,9 +368,6 @@ if propriedade != "Todos" and unidade != "Todas":
         # 🔥 Cálculo do NÍVEL DA UNIDADE
         # =============================
 
-        # Receita atual = soma do período filtrado (histórico já está agregado)
-        receita_atual = hist["receita_total"].sum()
-
         # Receita esperada (procura no De-para pelo nome da unidade)
         meta_linha = df_meta.loc[df_meta["unidade"]
                                  == unidade, "receita_esperada"]
@@ -392,7 +389,7 @@ if propriedade != "Todos" and unidade != "Todas":
                 receita_esperada = None
 
             if receita_esperada and receita_esperada > 0:
-                atingimento = receita_atual / receita_esperada
+                atingimento = receita_diarias / receita_esperada
 
                 # Classificação do nível
                 if atingimento < 0.5:
