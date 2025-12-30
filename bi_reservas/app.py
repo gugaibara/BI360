@@ -27,13 +27,17 @@ def load_data():
 
     sh = gc.open_by_key(st.secrets["google_sheets"]["spreadsheet_id"])
 
-    # 📌 Reservas (principal)
+    # 📌 Tabela principal de reservas
     ws_res = sh.worksheet(st.secrets["google_sheets"]["sheet_name"])
     df_reservas = pd.DataFrame(ws_res.get_all_records())
+    df_reservas = df_reservas.rename(
+        columns=lambda x: x.strip())  # limpa espaços
 
-    # 📌 De-para de metas (crie essa aba no Sheets)
+    # 📌 Tabela de metas / níveis (Base Níveis)
     ws_meta = sh.worksheet("Base Níveis")
     df_meta = pd.DataFrame(ws_meta.get_all_records())
+    df_meta = df_meta.rename(
+        columns=lambda x: x.strip().lower())  # normaliza nomes
 
     return df_reservas, df_meta
 
