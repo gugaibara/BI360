@@ -316,15 +316,15 @@ nivel_base = diarias_unidade.merge(
 )
 
 nivel_base["atingimento"] = nivel_base.apply(
-    lambda r: r["receita_diarias"] / r["meta_mes"]
-    if pd.notna(r["meta_mes"]) and r["meta_mes"] > 0
+    lambda r: r["receita_diarias"] / r["receita_esperada"]
+    if pd.notna(r["receita_esperada"]) and r["receita_esperada"] > 0
     else None,
     axis=1
 )
 
 
 def definir_nivel(row):
-    if pd.isna(row["meta_mes"]) or row["meta_mes"] == 0:
+    if pd.isna(row["receita_esperada"]) or row["receita_esperada"] == 0:
         return "Sem Meta"
     return classificar_nivel(row["atingimento"])
 
