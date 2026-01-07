@@ -202,14 +202,10 @@ if df_res_m.empty:
     st.stop()
 
 # ======================
-# KPIs EXECUTIVOS — MÊS
+# KPIs COMPARATIVOS
 # ======================
 
 st.markdown("### 📌 Resultados do Mês")
-
-# ======================
-# KPIs COMPARATIVOS
-# ======================
 
 
 def calcular_kpis_mes(df, mes):
@@ -244,18 +240,116 @@ def calcular_kpis_mes(df, mes):
     }
 
 
+def calcular_kpis_hist_mes(df_hist, mes):
+    df_m = df_hist[df_hist["mês"] == mes]
+
+    if df_m.empty:
+        return None
+
+    return {
+        "cleaning": df_m["cleaning_revenue"].sum(),
+        "adm": df_m["adm_360"].sum()
+    }
+
+
+def calcular_nivel_medio(df_res, df_meta, mes, partner_sel):
+    # filtra reservas do mês
+    df_m = df_res[df_res["mes"] == mes].copy()
+
+    if partner_sel != "Todos":
+        df_m = df_m[df_m["partner"] == partner_sel]
+
+    if df_m.empty:
+        return None
+
+    # receita de diárias por unidade
+    diarias_unidade = (
+        df_m
+        .groupby(["propriedade", "unidade"], as_index=False)
+        .agg(
+            valor_mes=("valor_mes", "sum"),
+            limpeza_mes=("limpeza_mes", "sum")
+        )
+    )
+
+    diarias_unidade["receita_diarias"] = (
+        diarias_unidade["valor_mes"] -
+        diarias_unidade["limpeza_mes"]
+    )
+
+    # merge com metas
+    nivel_base = diarias_unidade.merge(
+        df_meta,
+        on=["propriedade", "unidade"],
+        how="left"
+    )
+
+    # calcula atingimento
+    nivel_base["atingimento"] = None
+    mask = nivel_base["receita_esperada"] > 0
+
+    nivel_base.loc[mask, "atingimento"] = (
+        nivel_base.loc[mask, "receita_diarias"] /
+        nivel_base.loc[mask, "receita_esperada"]
+    )
+
+    # retorna média apenas das unidades com meta
+    nivel_medio = nivel_base.loc[mask, "atingimento"].mean()
+
+    return nivel_medio
+
+# ======================
+# BASE PARA COMPARATIVOS (RESERVAS + HISTÓRICO)
+# ======================
+
+
 df_res_comp = df_res.copy()
+df_hist_comp = df_hist.copy()
 
 if partner_sel != "Todos":
     df_res_comp = df_res_comp[df_res_comp["partner"] == partner_sel]
+    df_hist_comp = df_hist_comp[df_hist_comp["partnership"] == partner_sel]
+
 
 # ======================
-# KPIs (BASE ÚNICA)
+# PERÍODOS
 # ======================
 
 periodo = pd.Period(mes_sel, freq="M")
-mes_m1 = str(periodo - 1)
-mes_yoy = str(periodo - 12)
+
+mes_m1 = (periodo - 1).strftime("%Y-%m")
+mes_yoy = (periodo - 12).strftime("%Y-%m")
+
+
+# ======================
+# NÍVEL MÉDIO (ATUAL / M1 / YOY)
+# ======================
+
+nivel_medio_atual = calcular_nivel_medio(
+    df_res_comp,
+    df_meta,
+    mes_sel,
+    partner_sel
+)
+
+nivel_medio_m1 = calcular_nivel_medio(
+    df_res_comp,
+    df_meta,
+    mes_m1,
+    partner_sel
+)
+
+nivel_medio_yoy = calcular_nivel_medio(
+    df_res_comp,
+    df_meta,
+    mes_yoy,
+    partner_sel
+)
+
+
+# ======================
+# KPIs DE RESERVAS
+# ======================
 
 kpis_atual = calcular_kpis_mes(df_res_comp, mes_sel)
 kpis_m1 = calcular_kpis_mes(df_res_comp, mes_m1)
@@ -269,6 +363,19 @@ receita_total = kpis_atual["receita"]
 ocupacao = kpis_atual["ocupacao"]
 tarifa_media = kpis_atual["tarifa_media"]
 
+
+# ======================
+# KPIs HISTÓRICOS (CLEANING / ADM)
+# ======================
+
+kpis_hist_atual = calcular_kpis_hist_mes(df_hist_comp, mes_sel)
+kpis_hist_m1 = calcular_kpis_hist_mes(df_hist_comp, mes_m1)
+kpis_hist_yoy = calcular_kpis_hist_mes(df_hist_comp, mes_yoy)
+
+
+# ======================
+# FUNÇÃO DE VARIAÇÃO %
+# ======================
 
 def variacao_pct(atual, anterior):
     if anterior in (None, 0) or pd.isna(anterior):
@@ -405,6 +512,24 @@ nivel_base.loc[mask_meta, "nivel"] = (
     .apply(classificar_nivel)
 )
 
+nivel_medio_atual = calcular_nivel_medio(
+    df_res_comp,
+    df_meta,
+    mes_sel,
+    partner_sel
+)
+
+k6 = st.columns(6)[5]
+if nivel_medio_atual is not None:
+    k6.metric(
+        "🎯 Nível Médio",
+        f"{nivel_medio_atual*100:.1f}%"
+    )
+else:
+    k6.metric(
+        "🎯 Nível Médio",
+        "—"
+    )
 
 # ======================
 # AGREGAÇÃO POR NÍVEL
@@ -544,11 +669,30 @@ st.dataframe(
 st.divider()
 st.subheader("📈 Comparativos Temporais")
 
-dados_comp = []
+cards = []
+
+# ======================
+# VARIAÇÃO DO NÍVEL MÉDIO
+# ======================
+
+if nivel_medio_atual is not None and nivel_medio_m1 is not None:
+    variacao_nivel_medio_m1 = (nivel_medio_atual - nivel_medio_m1) * 100
+else:
+    variacao_nivel_medio_m1 = None
+
+if nivel_medio_atual is not None and nivel_medio_yoy is not None:
+    variacao_nivel_medio_yoy = (nivel_medio_atual - nivel_medio_yoy) * 100
+else:
+    variacao_nivel_medio_yoy = None
+
+
+# ======================
+# MOM
+# ======================
 
 if kpis_m1:
-    dados_comp.append({
-        "Comparação": "vs Mês Anterior",
+    cards.append({
+        "Comparação": "MoM",
         "Receita (%)": variacao_pct(
             kpis_atual["receita"], kpis_m1["receita"]
         ),
@@ -557,12 +701,30 @@ if kpis_m1:
         ),
         "Tarifa Média (%)": variacao_pct(
             kpis_atual["tarifa_media"], kpis_m1["tarifa_media"]
-        )
+        ),
+        "Cleaning Revenue (%)": (
+            variacao_pct(
+                kpis_hist_atual["cleaning"],
+                kpis_hist_m1["cleaning"]
+            ) if kpis_hist_m1 else None
+        ),
+        "Taxa Adm (%)": (
+            variacao_pct(
+                kpis_hist_atual["adm"],
+                kpis_hist_m1["adm"]
+            ) if kpis_hist_m1 else None
+        ),
+        "Nível Médio (pp)": variacao_nivel_medio_m1
     })
 
+
+# ======================
+# YOY
+# ======================
+
 if kpis_yoy:
-    dados_comp.append({
-        "Comparação": "vs Mesmo Mês Ano Anterior",
+    cards.append({
+        "Comparação": "YoY",
         "Receita (%)": variacao_pct(
             kpis_atual["receita"], kpis_yoy["receita"]
         ),
@@ -571,10 +733,28 @@ if kpis_yoy:
         ),
         "Tarifa Média (%)": variacao_pct(
             kpis_atual["tarifa_media"], kpis_yoy["tarifa_media"]
-        )
+        ),
+        "Cleaning Revenue (%)": (
+            variacao_pct(
+                kpis_hist_atual["cleaning"],
+                kpis_hist_yoy["cleaning"]
+            ) if kpis_hist_yoy else None
+        ),
+        "Taxa Adm (%)": (
+            variacao_pct(
+                kpis_hist_atual["adm"],
+                kpis_hist_yoy["adm"]
+            ) if kpis_hist_yoy else None
+        ),
+        "Nível Médio (pp)": variacao_nivel_medio_yoy
     })
 
-df_comp = pd.DataFrame(dados_comp)
+
+# ======================
+# TABELA FINAL
+# ======================
+
+df_comp = pd.DataFrame(cards)
 
 if df_comp.empty:
     st.info("Não há dados suficientes para comparativos temporais.")
@@ -583,7 +763,10 @@ else:
         df_comp.style.format({
             "Receita (%)": "{:+.1f}%",
             "Ocupação (pp)": "{:+.1f} pp",
-            "Tarifa Média (%)": "{:+.1f}%"
+            "Tarifa Média (%)": "{:+.1f}%",
+            "Cleaning Revenue (%)": "{:+.1f}%",
+            "Taxa Adm (%)": "{:+.1f}%",
+            "Nível Médio (pp)": "{:+.1f} pp"
         }),
         use_container_width=True,
         hide_index=True
