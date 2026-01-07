@@ -677,8 +677,6 @@ tabela_niveis = tabela_niveis.rename(
     }
 )
 
-tabela_niveis = tabela_niveis.fillna(0)
-
 st.dataframe(
     tabela_niveis.style.format({
         "Share (%)": "{:.1f}%",
