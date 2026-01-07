@@ -958,8 +958,7 @@ grafico_historico_3m(
     "Ocupação — Últimos 3 Meses",
     ocupacao_3m,
     labels_3m,
-    "Ocupação (%)",
-    unidade="%"
+    "Ocupação (%)"
 )
 
 st.subheader("📊 Histórico — Tarifa Média")
@@ -992,7 +991,6 @@ grafico_historico_3m(
     ating_3m,
     labels_3m,
     "Atingimento Médio (%)",
-    unidade_barra="%",
 )
 
 st.subheader("🧭 Histórico — Nível Médio")
