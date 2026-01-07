@@ -52,14 +52,32 @@ def load_data():
     df_hist = pd.DataFrame(ws_hist.get_all_records())
     df_hist.columns = df_hist.columns.str.strip().str.lower()
 
-    return df_res, df_hist
+    # ---- Aba Base Níveis ----
+    ws_meta = sh.worksheet("Base Níveis")
+    df_meta = pd.DataFrame(ws_meta.get_all_records())
+    df_meta.columns = df_meta.columns.str.strip().str.lower()
+
+    return df_res, df_hist, df_meta
 
 
-df_res, df_hist = load_data()
+df_res, df_hist, df_meta = load_data()
 
 # ======================
 # NORMALIZAÇÃO — FUNÇÕES
 # ======================
+
+
+def classificar_nivel(atingimento):
+    if atingimento >= 1.15:
+        return "Nível 5"
+    elif atingimento >= 1:
+        return "Nível 4"
+    elif atingimento >= 0.85:
+        return "Nível 3"
+    elif atingimento >= 0.5:
+        return "Nível 2"
+    else:
+        return "Nível 1"
 
 
 def parse_brl(series):
@@ -269,3 +287,99 @@ st.dataframe(
     use_container_width=True,
     hide_index=True
 )
+
+# ======================
+# DISTRIBUIÇÃO DE NÍVEIS
+# ======================
+
+# receita de diárias por unidade no mês
+diarias_unidade = (
+    df_res_m
+    .groupby(["propriedade", "unidade"], as_index=False)
+    .agg({
+        "valor_mes": "sum",
+        "limpeza_mes": "sum"
+    })
+)
+
+diarias_unidade["receita_diarias"] = (
+    diarias_unidade["valor_mes"] -
+    diarias_unidade["limpeza_mes"]
+)
+
+meta_base = df_meta.copy()
+
+nivel_base = diarias_unidade.merge(
+    meta_base,
+    on=["propriedade", "unidade"],
+    how="left"
+)
+
+nivel_base["atingimento"] = (
+    nivel_base["receita_diarias"] /
+    nivel_base["meta_mes"]
+)
+
+
+def definir_nivel(row):
+    if pd.isna(row["meta_mes"]) or row["meta_mes"] == 0:
+        return "Sem Meta"
+    return classificar_nivel(row["atingimento"])
+
+
+nivel_base["nivel"] = nivel_base.apply(definir_nivel, axis=1)
+
+dist_niveis = (
+    nivel_base
+    .groupby("nivel")
+    .size()
+    .reset_index(name="unidades")
+)
+
+total_unidades = dist_niveis["unidades"].sum()
+
+dist_niveis["percentual"] = (
+    dist_niveis["unidades"] / total_unidades * 100
+)
+
+ordem_niveis = [
+    "Nível 5",
+    "Nível 4",
+    "Nível 3",
+    "Nível 2",
+    "Nível 1",
+    "Sem Meta"
+]
+
+dist_niveis["nivel"] = pd.Categorical(
+    dist_niveis["nivel"],
+    categories=ordem_niveis,
+    ordered=True
+)
+
+dist_niveis = dist_niveis.sort_values("nivel")
+
+st.divider()
+st.subheader("🎯 Distribuição de Níveis (% de Atingimento da Meta)")
+st.caption(f"Total de unidades analisadas: {total_unidades}")
+
+fig_niveis = px.bar(
+    dist_niveis,
+    x="nivel",
+    y="percentual",
+    text="percentual",
+    title="Distribuição de Unidades por Nível de Atingimento"
+)
+
+fig_niveis.update_traces(
+    texttemplate="%{text:.1f}%",
+    textposition="outside"
+)
+
+fig_niveis.update_layout(
+    yaxis_title="Percentual (%)",
+    xaxis_title="Nível",
+    margin=dict(t=60, b=40, l=40, r=40)
+)
+
+st.plotly_chart(fig_niveis, use_container_width=True)
