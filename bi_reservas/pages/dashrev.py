@@ -1,6 +1,7 @@
 import pandas as pd
 import streamlit as st
 import plotly.express as px
+import plotly.graph_objects as go
 
 # ======================
 # CONFIGURAÇÃO DA PÁGINA
@@ -339,18 +340,22 @@ def definir_nivel(row):
 
 nivel_base["nivel"] = nivel_base.apply(definir_nivel, axis=1)
 
+# ======================
+# AGREGAÇÃO POR NÍVEL
+# ======================
+
 dist_niveis = (
     nivel_base
-    .groupby("nivel")
-    .size()
-    .reset_index(name="unidades")
+    .groupby("nivel", as_index=False)
+    .agg(
+        unidades=("unidade", "nunique"),
+        atingimento_medio=("atingimento", "mean")
+    )
 )
 
 total_unidades = dist_niveis["unidades"].sum()
 
-dist_niveis["percentual"] = (
-    dist_niveis["unidades"] / total_unidades * 100
-)
+dist_niveis["share"] = dist_niveis["unidades"] / total_unidades
 
 ordem_niveis = [
     "Nível 5",
@@ -369,27 +374,80 @@ dist_niveis["nivel"] = pd.Categorical(
 
 dist_niveis = dist_niveis.sort_values("nivel")
 
+# ======================
+# GRÁFICO COMBO DOS NÍVEIS
+# ======================
+
 st.divider()
-st.subheader("🎯 Distribuição de Níveis (% de Atingimento da Meta)")
-st.caption(f"Total de unidades analisadas: {total_unidades}")
+st.subheader("🎯 Distribuição de Níveis — Quantidade e Share")
 
-fig_niveis = px.bar(
-    dist_niveis,
-    x="nivel",
-    y="percentual",
-    text="percentual",
-    title="Distribuição de Unidades por Nível de Atingimento"
+fig = go.Figure()
+
+# ---- Barras: quantidade de unidades ----
+fig.add_trace(
+    go.Bar(
+        x=dist_niveis["nivel"],
+        y=dist_niveis["unidades"],
+        name="Nº de Unidades",
+        text=dist_niveis["unidades"],
+        textposition="outside"
+    )
 )
 
-fig_niveis.update_traces(
-    texttemplate="%{text:.1f}%",
-    textposition="outside"
+# ---- Linha: share (%) ----
+fig.add_trace(
+    go.Scatter(
+        x=dist_niveis["nivel"],
+        y=dist_niveis["share"] * 100,
+        name="Share (%)",
+        yaxis="y2",
+        mode="lines+markers",
+        text=(dist_niveis["share"] * 100).round(1),
+        hovertemplate="Share: %{y:.1f}%"
+    )
 )
 
-fig_niveis.update_layout(
-    yaxis_title="Percentual (%)",
-    xaxis_title="Nível",
-    margin=dict(t=60, b=40, l=40, r=40)
+fig.update_layout(
+    yaxis=dict(
+        title="Nº de Unidades"
+    ),
+    yaxis2=dict(
+        title="Share (%)",
+        overlaying="y",
+        side="right",
+        range=[0, 100]
+    ),
+    legend=dict(orientation="h", y=1.15),
+    margin=dict(t=80, b=40, l=40, r=40)
 )
 
-st.plotly_chart(fig_niveis, use_container_width=True)
+st.plotly_chart(fig, use_container_width=True)
+
+# ======================
+# TABELA — DISTRIBUIÇÃO DE NÍVEIS
+# ======================
+
+tabela_niveis = dist_niveis.copy()
+
+tabela_niveis["Share (%)"] = tabela_niveis["share"] * 100
+tabela_niveis["Atingimento Médio (%)"] = tabela_niveis["atingimento_medio"] * 100
+
+tabela_niveis = tabela_niveis[
+    ["nivel", "unidades", "Share (%)", "Atingimento Médio (%)"]
+]
+
+tabela_niveis = tabela_niveis.rename(
+    columns={
+        "nivel": "Nível",
+        "unidades": "Nº de Unidades"
+    }
+)
+
+st.dataframe(
+    tabela_niveis.style.format({
+        "Share (%)": "{:.1f}%",
+        "Atingimento Médio (%)": "{:.1f}%"
+    }),
+    use_container_width=True,
+    hide_index=True
+)
