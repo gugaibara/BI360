@@ -1,10 +1,17 @@
-# app.py
-
 import pandas as pd
 import streamlit as st
 import plotly.express as px
 
 st.set_page_config(page_title="BI Reservas", layout="wide")
+
+CORES_CANAIS = {
+    "Airbnb": "#FF00CC",
+    "Booking.com": "#0217FF",
+    "Direct": "#02812C",
+    "Direct_Partner": "#00CC7E",
+    "Site": "#FF0000",
+    "Expedia": "#EEFF00"
+}
 
 # ======================
 # 1. INPUT DOS DADOS
@@ -65,6 +72,37 @@ def parse_brl(series):
     )
 
 
+def calcular_kpis(df, mes):
+    periodo = pd.Period(mes, freq="M")
+    dias_mes = periodo.days_in_month
+
+    reservas = df["id_reserva"].nunique()
+    noites = df["noites_mes"].sum()
+
+    receita_total = df["valor_mes"].sum()
+    receita_limpeza = df["limpeza_mes"].sum()
+    receita_diarias = receita_total - receita_limpeza
+
+    unidades = (
+        df[["id_propriedade", "unidade"]]
+        .drop_duplicates()
+        .shape[0]
+    )
+
+    ocupacao = (
+        (noites / (unidades * dias_mes)) * 100
+        if unidades > 0 else 0
+    )
+
+    return (
+        reservas,
+        ocupacao,
+        receita_total,
+        receita_diarias,
+        receita_limpeza
+    )
+
+
 # colunas monetárias (BRL)
 cols_money = ["valor_mes", "limpeza_mes"]
 
@@ -109,83 +147,77 @@ df["id_propriedade"] = (
 # 3. FILTROS
 # ======================
 
-col1, col2, col3, col4, col5 = st.columns(5)
+with st.sidebar:
+    st.header("🔎 Filtros")
 
-with col1:
     partner = st.selectbox(
         "Partner",
         ["Todos"] + sorted(df["partner"].unique())
     )
 
-if partner != "Todos":
-    predios_disponiveis = (
-        df[df["partner"] == partner]["propriedade"]
+    meses = (
+        df[["mes", "mes_dt"]]
         .drop_duplicates()
-        .sort_values()
+        .sort_values("mes_dt")["mes"]
         .tolist()
     )
-else:
-    predios_disponiveis = sorted(df["propriedade"].unique())
+    mes = st.selectbox("Mês", meses)
 
-meses_ordenados = (
-    df[["mes", "mes_dt"]]
-    .drop_duplicates()
-    .sort_values("mes_dt")["mes"]
-    .tolist()
-)
-
-with col2:
-    mes = st.selectbox("Mês", meses_ordenados)
-
-with col3:
-    propriedade = st.selectbox(
-        "Prédio",
-        ["Todos"] + predios_disponiveis
-    )
-
-if propriedade != "Todos":
     if partner != "Todos":
-        unidades_disponiveis = (
-            df[
-                (df["partner"] == partner) &
-                (df["propriedade"] == propriedade)
-            ]["unidade"]
+        propriedades = (
+            df[df["partner"] == partner]["propriedade"]
             .drop_duplicates()
             .sort_values()
             .tolist()
         )
     else:
-        unidades_disponiveis = (
+        propriedades = sorted(df["propriedade"].unique())
+
+    propriedade = st.selectbox(
+        "Prédio",
+        ["Todos"] + propriedades
+    )
+
+    if propriedade != "Todos":
+        unidades = (
             df[df["propriedade"] == propriedade]["unidade"]
             .drop_duplicates()
             .sort_values()
             .tolist()
         )
-else:
-    unidades_disponiveis = []
-
-with col4:
-    if propriedade != "Todos":
         unidade = st.selectbox(
             "Unidade",
-            ["Todas"] + unidades_disponiveis
+            ["Todas"] + unidades
         )
     else:
         unidade = "Todas"
-        st.selectbox("Unidade", ["Selecione um prédio"], disabled=True)
+        st.selectbox(
+            "Unidade",
+            ["Selecione um prédio"],
+            disabled=True
+        )
 
-with col5:
     canal = st.multiselect(
         "Canal",
         sorted(df["canal"].unique()),
         default=sorted(df["canal"].unique())
     )
 
+
 # ======================
 # 4. APLICA FILTROS
 # ======================
 
 df_f = df.copy()
+
+st.title("📊 BI de Reservas")
+
+st.caption(
+    f"Partner: {partner} | "
+    f"Mês: {mes} | "
+    f"Prédio: {propriedade} | "
+    f"Unidade: {unidade}"
+)
 
 if partner != "Todos":
     df_f = df_f[df_f["partner"] == partner]
@@ -201,40 +233,19 @@ if unidade != "Todas":
 if canal:
     df_f = df_f[df_f["canal"].isin(canal)]
 
-# ======================
-# 5. MÉTRICAS BASE
-# ======================
-
-reservas = df_f["id_reserva"].nunique()
-noites = df_f["noites_mes"].sum()
-receita_total = df_f["valor_mes"].sum()
-receita_limpeza = df_f["limpeza_mes"].sum()
-receita_diarias = receita_total - receita_limpeza
-
-# Ocupação (simples, considerando 30 dias)
-unidades_ativas = df_f[["id_propriedade", "unidade"]
-                       ].drop_duplicates().shape[0]
-noites_disponiveis = unidades_ativas * 30
-ocupacao = noites / noites_disponiveis if noites_disponiveis > 0 else 0
+if df_f.empty:
+    st.warning("Nenhum dado encontrado para os filtros selecionados.")
+    st.stop()
 
 # ======================
 # 6. KPIs
 # ======================
 
-reservas = df_f["id_reserva"].nunique()
-noites = df_f["noites_mes"].sum()
-receita_total = df_f["valor_mes"].sum()
-receita_limpeza = df_f["limpeza_mes"].sum()
-receita_diarias = receita_total - receita_limpeza
+reservas, ocupacao, receita_total, receita_diarias, receita_limpeza = (
+    calcular_kpis(df_f, mes)
+)
 
-periodo = pd.Period(mes, freq="M")
-dias_no_mes = periodo.days_in_month
-
-# ocupação (se for unidade única, cálculo direto; senão, média ponderada)
-unidades_ativas = df_f[["id_propriedade", "unidade"]
-                       ].drop_duplicates().shape[0]
-noites_disponiveis = unidades_ativas * dias_no_mes
-ocupacao = (noites / noites_disponiveis * 100) if noites_disponiveis > 0 else 0
+st.subheader("📌 Indicadores do Mês")
 
 k1, k2, k3, k4, k5 = st.columns(5)
 
@@ -257,8 +268,10 @@ if unidade != "Todas":
     )
     st.caption(f"Resumo operacional da unidade no mês {mes}")
 
+
 # se estiver filtrando unidade, não exibe gráfico agregado
 if unidade == "Todas" and propriedade != "Todos":
+    st.subheader("📊 Receita por Unidade")
     grafico_df = (
         df_f.groupby("unidade", as_index=False)
         .agg(receita=("valor_mes", "sum"))
@@ -314,7 +327,10 @@ if propriedade != "Todos" and unidade != "Todas":
         )
 
         hist["ocupacao"] = (hist["noites_ocupadas"] / hist["dias_mes"] * 100)
-        hist["ADR"] = hist["receita_diarias"] / hist["noites_ocupadas"]
+        hist["ADR"] = (
+            hist["receita_diarias"] /
+            hist["noites_ocupadas"].replace(0, pd.NA)
+        )
         hist["RevPAR"] = hist["ADR"] * (hist["ocupacao"] / 100)
 
         col_h1, col_h2 = st.columns(2)
@@ -394,7 +410,7 @@ if propriedade != "Todos" and unidade != "Todas":
                 hist["nivel"] = hist["atingimento"].apply(classificar_nivel)
 
                 st.divider()
-                st.subheader("📊 Histórico de Níveis por Mês")
+                st.subheader("🎯 Histórico de Níveis (Meta vs Real)")
 
                 fig_nivel = px.bar(
                     hist,
@@ -421,6 +437,9 @@ if propriedade != "Todos":
         "📊 Ver histórico mensal do prédio",
         value=False
     )
+
+    st.divider()
+    st.subheader(f"🏢 Histórico Mensal — {propriedade}")
 
     if ver_hist_predio:
         hist_p = (
@@ -453,7 +472,10 @@ if propriedade != "Todos":
             (hist_p["dias_mes"] * hist_p["unidades"]) * 100
         )
 
-        hist_p["ADR"] = hist_p["receita_diarias"] / hist_p["noites_ocupadas"]
+        hist_p["ADR"] = (
+            hist_p["receita_diarias"] /
+            hist_p["noites_ocupadas"].replace(0, pd.NA)
+        )
 
         col_p1, col_p2 = st.columns(2)
 
@@ -504,7 +526,7 @@ if propriedade != "Todos":
 # ======================
 
 st.divider()
-st.subheader("Detalhe por Unidade")
+st.subheader("📋 Detalhe por Unidade")
 
 # --- calendário real do mês ---
 periodo = pd.Period(mes, freq="M")
@@ -525,7 +547,10 @@ agg = (
 # métricas calculadas
 agg["receita_diarias"] = agg["receita_total"] - agg["receita_limpeza"]
 agg["ocupacao"] = (agg["noites_ocupadas"] / dias_no_mes) * 100
-agg["ADR"] = agg["receita_diarias"] / agg["noites_ocupadas"]
+agg["ADR"] = (
+    agg["receita_diarias"] /
+    agg["noites_ocupadas"].replace(0, pd.NA)
+)
 agg["RevPAR"] = agg["ADR"] * (agg["ocupacao"] / 100)
 
 # remove coluna técnica
@@ -567,29 +592,18 @@ st.dataframe(
 
 # ======================
 # 9. SHARE DE CANAL
-
-
 # ======================
 
-st.subheader("Share de Canal (%)")
+st.divider()
+st.subheader("📊 Share de Canal (%)")
 
 canal_share = (
     df_f.groupby("canal", as_index=False)["valor_mes"].sum()
 )
-canal_share["share"] = canal_share["valor_mes"] / \
-    canal_share["valor_mes"].sum()
 
-cores_canais = {
-    "Airbnb": "#FF00CC",
-    "Booking.com": "#0217FF",
-    "Direct": "#02812C",
-    "Direct_Partner": "#00CC7E",
-    "Site": "#FF0000",
-    "Expedia": "#EEFF00"
-}
-
-# Adiciona uma coluna com cor baseada no canal
-canal_share["cor"] = canal_share["canal"].map(cores_canais)
+canal_share["share"] = (
+    canal_share["valor_mes"] / canal_share["valor_mes"].sum()
+)
 
 fig_share = px.pie(
     canal_share,
@@ -598,21 +612,30 @@ fig_share = px.pie(
     title="Participação de Receita por Canal",
     hole=0.4,
     color="canal",
-    color_discrete_map=cores_canais
+    color_discrete_map=CORES_CANAIS
 )
 
 fig_share.update_traces(
     textinfo="label+percent",
-    hovertemplate="Canal: %{label}<br>Receita: R$ %{value:,.2f}<br>Share: %{percent}"
+    hovertemplate=(
+        "Canal: %{label}<br>"
+        "Receita: R$ %{value:,.2f}<br>"
+        "Share: %{percent}"
+    )
 )
 
-st.plotly_chart(fig_share, use_container_width=True)
+if canal_share.empty:
+    st.info("Sem dados para exibir o share de canal.")
+else:
+    st.plotly_chart(fig_share, use_container_width=True)
+
 
 # ======================
 # 10. RANKINGS
 # ======================
 
-st.subheader("Ranking de Unidades")
+st.divider()
+st.subheader("🏆 Ranking de Unidades")
 
 ranking_unidade = agg.copy()
 
@@ -663,7 +686,8 @@ st.dataframe(
     }
 )
 
-st.subheader("Ranking de Prédios")
+st.divider()
+st.subheader("🏢 Ranking de Prédios")
 
 ranking_predio = (
     agg.groupby(["id_propriedade", "propriedade"], as_index=False)
