@@ -93,20 +93,10 @@ df_hist.columns = (
     .str.lower()
 )
 
-df_hist["cleaning_revenue"] = pd.to_numeric(
-    df_hist["cleaning_revenue"],
-    errors="coerce"
-).fillna(0)
-
-df_hist["adm_360"] = pd.to_numeric(
-    df_hist["adm_360"],
-    errors="coerce"
-).fillna(0)
-
-df_hist["price_less_comission"] = pd.to_numeric(
-    df_hist["price_less_comission"],
-    errors="coerce"
-).fillna(0)
+df_hist["cleaning_revenue"] = parse_brl(df_hist["cleaning_revenue"])
+df_hist["adm_360"] = parse_brl(df_hist["adm_360"])
+df_hist["price_less_comission"] = parse_brl(df_hist["price_less_comission"])
+df_hist["plclc"] = parse_brl(df_hist["plclc"])
 
 # ======================
 # FILTRO DE MÊS (EXECUTIVO)
@@ -173,3 +163,11 @@ k2.metric("🏨 Ocupação", f"{ocupacao:.1f}%")
 k3.metric("📊 Tarifa Média", f"R$ {tarifa_media:,.2f}")
 k4.metric("🧹 Cleaning Revenue", f"R$ {cleaning_revenue:,.2f}")
 k5.metric("🏷️ Taxa Adm", f"R$ {taxa_adm:,.2f}")
+
+
+st.write(df_hist[[
+    "cleaning_revenue",
+    "adm_360",
+    "price_less_comission",
+    "plclc"
+]].head())
