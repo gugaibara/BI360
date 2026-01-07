@@ -391,7 +391,7 @@ dist_niveis = dist_niveis.sort_values("nivel")
 
 st.divider()
 st.subheader("🎯 Distribuição de Níveis — Quantidade e Share")
-
+st.caption(f"Total de unidades analisadas: **{total_unidades}**")
 fig = go.Figure()
 
 # ---- Barras: quantidade de unidades ----
@@ -469,6 +469,46 @@ st.dataframe(
     tabela_niveis.style.format({
         "Share (%)": "{:.1f}%",
         "Atingimento Médio (%)": "{:.1f}%"
+    }),
+    use_container_width=True,
+    hide_index=True
+)
+
+# ======================
+# TABELA DE VALIDAÇÃO — UNIDADES
+# ======================
+
+st.divider()
+st.subheader("🔎 Validação de Atingimento por Unidade")
+
+tabela_validacao = nivel_base.copy()
+
+tabela_validacao = tabela_validacao[
+    [
+        "unidade",
+        "receita_diarias",
+        "receita_esperada",
+        "atingimento",
+        "nivel"
+    ]
+].sort_values("atingimento", ascending=False)
+
+tabela_validacao["Atingimento (%)"] = tabela_validacao["atingimento"] * 100
+
+tabela_validacao = tabela_validacao.rename(
+    columns={
+        "unidade": "Unidade",
+        "receita_diarias": "Receita Diárias (R$)",
+        "receita_esperada": "Receita Esperada (R$)",
+        "nivel": "Nível"
+    }
+)
+
+st.dataframe(
+    tabela_validacao.style.format({
+        "Receita Diárias (R$)": "R$ {:,.2f}",
+        "Receita Esperada (R$)": "R$ {:,.2f}",
+        "Atingimento (%)": "{:.1f}%"
     }),
     use_container_width=True,
     hide_index=True
