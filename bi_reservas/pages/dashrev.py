@@ -244,7 +244,10 @@ def calcular_kpis_hist_mes(df_hist, mes):
     df_m = df_hist[df_hist["mês"] == mes]
 
     if df_m.empty:
-        return None
+        return {
+            "cleaning": None,
+            "adm": None
+        }
 
     return {
         "cleaning": df_m["cleaning_revenue"].sum(),
@@ -510,13 +513,6 @@ mask_meta = nivel_base["receita_esperada"] > 0
 nivel_base.loc[mask_meta, "nivel"] = (
     nivel_base.loc[mask_meta, "atingimento"]
     .apply(classificar_nivel)
-)
-
-nivel_medio_atual = calcular_nivel_medio(
-    df_res_comp,
-    df_meta,
-    mes_sel,
-    partner_sel
 )
 
 k6 = st.columns(6)[5]
