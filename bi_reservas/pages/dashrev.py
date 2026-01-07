@@ -806,11 +806,141 @@ if kpis_yoy:
     })
 
 
+df_comp = pd.DataFrame(cards)
+
+# ======================
+# GRÁFICO CORE METRICS
+# ======================
+
+metricas_core = [
+    "Receita (%)",
+    "Ocupação (pp)",
+    "Tarifa Média (%)"
+]
+
+df_core = (
+    df_comp
+    .melt(
+        id_vars="Comparação",
+        value_vars=metricas_core,
+        var_name="Métrica",
+        value_name="Variação"
+    )
+)
+
+fig_core = px.bar(
+    df_core,
+    x="Métrica",
+    y="Variação",
+    color="Comparação",
+    barmode="group",
+    text="Variação",
+    title="Comparativo MoM x YoY — Performance Operacional"
+)
+
+fig_core.update_traces(
+    texttemplate="%{text:.1f}",
+    textposition="outside"
+)
+
+fig_core.update_layout(
+    yaxis_title="Variação",
+    xaxis_title="",
+    legend_title="",
+    margin=dict(t=60, b=40)
+)
+
+st.plotly_chart(fig_core, use_container_width=True)
+
+# ======================
+# GRÁFICO CLEANING + ADM
+# ======================
+
+metricas_custo = [
+    "Cleaning Revenue (%)",
+    "Taxa Adm (%)"
+]
+
+df_custo = (
+    df_comp
+    .melt(
+        id_vars="Comparação",
+        value_vars=metricas_custo,
+        var_name="Métrica",
+        value_name="Variação"
+    )
+)
+
+fig_custo = px.bar(
+    df_custo,
+    x="Métrica",
+    y="Variação",
+    color="Comparação",
+    barmode="group",
+    text="Variação",
+    title="Comparativo MoM x YoY — Custos"
+)
+
+fig_custo.update_traces(
+    texttemplate="%{text:.1f}",
+    textposition="outside"
+)
+
+fig_custo.update_layout(
+    yaxis_title="Variação",
+    xaxis_title="",
+    legend_title="",
+    margin=dict(t=60, b=40)
+)
+
+st.plotly_chart(fig_custo, use_container_width=True)
+
+# ======================
+# GRÁFICO NÍVEIS
+# ======================
+
+metricas_nivel = [
+    "Atingimento Médio (pp)",
+    "Nível Médio (Δ)"
+]
+
+df_nivel = (
+    df_comp
+    .melt(
+        id_vars="Comparação",
+        value_vars=metricas_nivel,
+        var_name="Métrica",
+        value_name="Variação"
+    )
+)
+
+fig_nivel = px.bar(
+    df_nivel,
+    x="Métrica",
+    y="Variação",
+    color="Comparação",
+    barmode="group",
+    text="Variação",
+    title="Comparativo MoM x YoY — Nível de Performance"
+)
+
+fig_nivel.update_traces(
+    texttemplate="%{text:.2f}",
+    textposition="outside"
+)
+
+fig_nivel.update_layout(
+    yaxis_title="Variação",
+    xaxis_title="",
+    legend_title="",
+    margin=dict(t=60, b=40)
+)
+
+st.plotly_chart(fig_nivel, use_container_width=True)
+
 # ======================
 # TABELA FINAL
 # ======================
-
-df_comp = pd.DataFrame(cards)
 
 if df_comp.empty:
     st.info("Não há dados suficientes para comparativos temporais.")
@@ -835,6 +965,7 @@ else:
     df_comp_safe[colunas_existentes] = df_comp_safe[colunas_existentes].astype(
         float)
 
+    st.markdown("#### 📋 Tabela de Comparativos Temporais")
     st.dataframe(
         df_comp_safe.style.format({
             "Receita (%)": "{:+.1f}%",
