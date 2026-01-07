@@ -109,14 +109,38 @@ meses = (
     .tolist()
 )
 
-mes_sel = st.selectbox(
-    "📅 Selecione o mês de análise",
-    meses,
-    index=len(meses) - 1
-)
+# ======================
+# FILTROS EXECUTIVOS
+# ======================
 
+c1, c2 = st.columns([1, 3])
+
+with c1:
+    mes_sel = st.selectbox(
+        "📅 Mês de análise",
+        meses,
+        index=len(meses) - 1
+    )
+
+with c2:
+    partners = ["Todos"] + sorted(df_res["partner"].dropna().unique().tolist())
+
+    partner_sel = st.selectbox(
+        "🤝 Partner",
+        partners
+    )
+
+# ---- aplica filtros ----
 df_res_m = df_res[df_res["mes"] == mes_sel]
-df_hist_m = df_hist[df_hist["mês"] == mes_sel]
+df_hist_m = df_hist[
+    (df_hist["mês"] == mes_sel) &
+    (df_hist["partnership"].notna())
+]
+
+if partner_sel != "Todos":
+    df_res_m = df_res_m[df_res_m["partner"] == partner_sel]
+    df_hist_m = df_hist_m[df_hist_m["partnership"] == partner_sel]
+    st.caption(f"Resultados para o partner: **{partner_sel}**")
 
 if df_res_m.empty:
     st.warning("Sem dados de reservas para o mês selecionado.")
@@ -163,11 +187,3 @@ k2.metric("🏨 Ocupação", f"{ocupacao:.1f}%")
 k3.metric("📊 Tarifa Média", f"R$ {tarifa_media:,.2f}")
 k4.metric("🧹 Cleaning Revenue", f"R$ {cleaning_revenue:,.2f}")
 k5.metric("🏷️ Taxa Adm", f"R$ {taxa_adm:,.2f}")
-
-
-st.write(df_hist[[
-    "cleaning_revenue",
-    "adm_360",
-    "price_less_comission",
-    "plclc"
-]].head())
