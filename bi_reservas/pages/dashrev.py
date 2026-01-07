@@ -35,6 +35,14 @@ CORES_NIVEIS = {
 
 COR_SHARE = "#38bdf8"  # azul claro executivo
 
+MAPA_NIVEL_NUM = {
+    "Nível 1": 1,
+    "Nível 2": 2,
+    "Nível 3": 3,
+    "Nível 4": 4,
+    "Nível 5": 5
+}
+
 # ======================
 # FUNÇÕES DE CARGA
 # ======================
@@ -95,7 +103,8 @@ def parse_brl(series):
         .str.replace(",", ".", regex=False)
         .str.replace(r"[^\d.-]", "", regex=True)
         .replace("", "0")
-        .astype(float)
+        .pipe(pd.to_numeric, errors="coerce")
+        .fillna(0.0)
     )
 
 # ======================
@@ -255,7 +264,7 @@ def calcular_kpis_hist_mes(df_hist, mes):
     }
 
 
-def calcular_nivel_medio(df_res, df_meta, mes, partner_sel):
+def calcular_metricas_nivel(df_res, df_meta, mes, partner_sel):
     # filtra reservas do mês
     df_m = df_res[df_res["mes"] == mes].copy()
 
@@ -263,7 +272,10 @@ def calcular_nivel_medio(df_res, df_meta, mes, partner_sel):
         df_m = df_m[df_m["partner"] == partner_sel]
 
     if df_m.empty:
-        return None
+        return {
+            "atingimento_medio": None,
+            "nivel_medio": None
+        }
 
     # receita de diárias por unidade
     diarias_unidade = (
@@ -296,10 +308,20 @@ def calcular_nivel_medio(df_res, df_meta, mes, partner_sel):
         nivel_base.loc[mask, "receita_esperada"]
     )
 
-    # retorna média apenas das unidades com meta
-    nivel_medio = nivel_base.loc[mask, "atingimento"].mean()
+    # classifica nível
+    nivel_base.loc[mask, "nivel"] = (
+        nivel_base.loc[mask, "atingimento"]
+        .apply(classificar_nivel)
+    )
 
-    return nivel_medio
+    # converte nível para número
+    nivel_base["nivel_num"] = nivel_base["nivel"].map(MAPA_NIVEL_NUM)
+
+    return {
+        "atingimento_medio": nivel_base.loc[mask, "atingimento"].mean(),
+        "nivel_medio": nivel_base.loc[mask, "nivel_num"].mean()
+    }
+
 
 # ======================
 # BASE PARA COMPARATIVOS (RESERVAS + HISTÓRICO)
@@ -328,27 +350,17 @@ mes_yoy = (periodo - 12).strftime("%Y-%m")
 # NÍVEL MÉDIO (ATUAL / M1 / YOY)
 # ======================
 
-nivel_medio_atual = calcular_nivel_medio(
-    df_res_comp,
-    df_meta,
-    mes_sel,
-    partner_sel
+metricas_nivel_atual = calcular_metricas_nivel(
+    df_res_comp, df_meta, mes_sel, partner_sel
 )
 
-nivel_medio_m1 = calcular_nivel_medio(
-    df_res_comp,
-    df_meta,
-    mes_m1,
-    partner_sel
+metricas_nivel_m1 = calcular_metricas_nivel(
+    df_res_comp, df_meta, mes_m1, partner_sel
 )
 
-nivel_medio_yoy = calcular_nivel_medio(
-    df_res_comp,
-    df_meta,
-    mes_yoy,
-    partner_sel
+metricas_nivel_yoy = calcular_metricas_nivel(
+    df_res_comp, df_meta, mes_yoy, partner_sel
 )
-
 
 # ======================
 # KPIs DE RESERVAS
@@ -399,7 +411,7 @@ cleaning_revenue = df_hist_m["cleaning_revenue"].sum()
 taxa_adm = df_hist_m["adm_360"].sum()
 
 # ---- Layout KPIs ----
-k1, k2, k3, k4, k5 = st.columns(5)
+k1, k2, k3, k4, k5, k6, k7 = st.columns(7)
 
 k1.metric("💰 Receita Total", f"R$ {receita_total:,.2f}")
 k2.metric("🏨 Ocupação", f"{ocupacao:.1f}%")
@@ -411,6 +423,19 @@ k4.metric(
 k5.metric(
     "🏷️ Taxa Adm",
     f"R$ {taxa_adm:,.2f}" if taxa_adm > 0 else "—"
+)
+# 🎯 Atingimento Médio
+k6.metric(
+    "🎯 Atingimento Médio",
+    f"{metricas_nivel_atual['atingimento_medio']*100:.1f}%"
+    if metricas_nivel_atual["atingimento_medio"] is not None else "—"
+)
+
+# 🧭 Nível Médio
+k7.metric(
+    "🧭 Nível Médio",
+    f"{metricas_nivel_atual['nivel_medio']:.2f}"
+    if metricas_nivel_atual["nivel_medio"] is not None else "—"
 )
 
 
@@ -530,18 +555,6 @@ nivel_base.loc[mask_meta, "nivel"] = (
     .apply(classificar_nivel)
 )
 
-k6 = st.columns(6)[5]
-if nivel_medio_atual is not None:
-    k6.metric(
-        "🎯 Nível Médio",
-        f"{nivel_medio_atual*100:.1f}%"
-    )
-else:
-    k6.metric(
-        "🎯 Nível Médio",
-        "—"
-    )
-
 # ======================
 # AGREGAÇÃO POR NÍVEL
 # ======================
@@ -609,7 +622,7 @@ fig.add_trace(
         name="Share (%)",
         yaxis="y2",
         mode="lines+markers",
-        line=dict(color="#38bdf8", width=3),
+        line=dict(color=COR_SHARE, width=3),
         marker=dict(size=8),
         hovertemplate="Share: %{y:.1f}%"
     )
@@ -664,6 +677,8 @@ tabela_niveis = tabela_niveis.rename(
     }
 )
 
+tabela_niveis = tabela_niveis.fillna(0)
+
 st.dataframe(
     tabela_niveis.style.format({
         "Share (%)": "{:.1f}%",
@@ -672,6 +687,7 @@ st.dataframe(
     use_container_width=True,
     hide_index=True
 )
+
 
 # ======================
 # COMPARATIVOS TEMPORAIS
@@ -686,15 +702,19 @@ cards = []
 # VARIAÇÃO DO NÍVEL MÉDIO
 # ======================
 
-if nivel_medio_atual is not None and nivel_medio_m1 is not None:
-    variacao_nivel_medio_m1 = (nivel_medio_atual - nivel_medio_m1) * 100
-else:
-    variacao_nivel_medio_m1 = None
+# Atingimento médio (pp)
+var_ating_medio_m1 = (
+    (metricas_nivel_atual["atingimento_medio"] -
+     metricas_nivel_m1["atingimento_medio"]) * 100
+    if metricas_nivel_m1["atingimento_medio"] is not None else None
+)
 
-if nivel_medio_atual is not None and nivel_medio_yoy is not None:
-    variacao_nivel_medio_yoy = (nivel_medio_atual - nivel_medio_yoy) * 100
-else:
-    variacao_nivel_medio_yoy = None
+# Nível médio (diferença absoluta)
+var_nivel_medio_m1 = (
+    metricas_nivel_atual["nivel_medio"] -
+    metricas_nivel_m1["nivel_medio"]
+    if metricas_nivel_m1["nivel_medio"] is not None else None
+)
 
 
 # ======================
@@ -725,13 +745,31 @@ if kpis_m1:
                 kpis_hist_m1["adm"]
             ) if kpis_hist_m1 else None
         ),
-        "Nível Médio (pp)": variacao_nivel_medio_m1
+        "Atingimento Médio (pp)": var_ating_medio_m1,
+        "Nível Médio (Δ)": var_nivel_medio_m1
     })
-
 
 # ======================
 # YOY
 # ======================
+
+var_ating_medio_yoy = (
+    (metricas_nivel_atual["atingimento_medio"] -
+     metricas_nivel_yoy["atingimento_medio"]) * 100
+    if (
+        metricas_nivel_atual["atingimento_medio"] is not None and
+        metricas_nivel_yoy["atingimento_medio"] is not None
+    ) else None
+)
+
+var_nivel_medio_yoy = (
+    metricas_nivel_atual["nivel_medio"] -
+    metricas_nivel_yoy["nivel_medio"]
+    if (
+        metricas_nivel_atual["nivel_medio"] is not None and
+        metricas_nivel_yoy["nivel_medio"] is not None
+    ) else None
+)
 
 if kpis_yoy:
     cards.append({
@@ -757,7 +795,8 @@ if kpis_yoy:
                 kpis_hist_yoy["adm"]
             ) if kpis_hist_yoy else None
         ),
-        "Nível Médio (pp)": variacao_nivel_medio_yoy
+        "Atingimento Médio (pp)": var_ating_medio_yoy,
+        "Nível Médio (Δ)": var_nivel_medio_yoy
     })
 
 
@@ -778,7 +817,8 @@ else:
         "Tarifa Média (%)",
         "Cleaning Revenue (%)",
         "Taxa Adm (%)",
-        "Nível Médio (pp)"
+        "Atingimento Médio (pp)",
+        "Nível Médio (Δ)"
     ]
 
     colunas_existentes = [
@@ -796,7 +836,8 @@ else:
             "Tarifa Média (%)": "{:+.1f}%",
             "Cleaning Revenue (%)": "{:+.1f}%",
             "Taxa Adm (%)": "{:+.1f}%",
-            "Nível Médio (pp)": "{:+.1f} pp"
+            "Atingimento Médio (pp)": "{:+.1f} pp",
+            "Nível Médio (Δ)": "{:+.2f}"
         }),
         use_container_width=True,
         hide_index=True
