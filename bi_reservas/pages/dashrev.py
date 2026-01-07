@@ -315,9 +315,11 @@ nivel_base = diarias_unidade.merge(
     how="left"
 )
 
-nivel_base["atingimento"] = (
-    nivel_base["receita_diarias"] /
-    nivel_base["meta_mes"]
+nivel_base["atingimento"] = nivel_base.apply(
+    lambda r: r["receita_diarias"] / r["meta_mes"]
+    if pd.notna(r["meta_mes"]) and r["meta_mes"] > 0
+    else None,
+    axis=1
 )
 
 
