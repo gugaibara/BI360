@@ -13,6 +13,15 @@ st.set_page_config(
 st.title("📈 Dash Revenue — Resultados")
 st.caption("Apresentação executiva de resultados mensais")
 
+CORES_CANAIS = {
+    "Airbnb": "#FF00CC",
+    "Booking.com": "#0217FF",
+    "Direct": "#02812C",
+    "Direct_Partner": "#00CC7E",
+    "Site": "#FF0000",
+    "Expedia": "#EEFF00"
+}
+
 # ======================
 # FUNÇÕES DE CARGA
 # ======================
@@ -187,3 +196,49 @@ k2.metric("🏨 Ocupação", f"{ocupacao:.1f}%")
 k3.metric("📊 Tarifa Média", f"R$ {tarifa_media:,.2f}")
 k4.metric("🧹 Cleaning Revenue", f"R$ {cleaning_revenue:,.2f}")
 k5.metric("🏷️ Taxa Adm", f"R$ {taxa_adm:,.2f}")
+
+# ======================
+# SHARE DE CANAL
+# ======================
+
+st.divider()
+st.subheader("📊 Share de Canal")
+
+canal_share = (
+    df_res_m
+    .groupby("canal", as_index=False)["valor_mes"]
+    .sum()
+)
+
+total_receita = canal_share["valor_mes"].sum()
+
+if total_receita == 0:
+    st.info("Sem dados suficientes para calcular o share de canal.")
+else:
+    canal_share["share"] = canal_share["valor_mes"] / total_receita
+
+    fig_share = px.pie(
+        canal_share,
+        names="canal",
+        values="valor_mes",
+        hole=0.45,
+        title="Distribuição de Receita por Canal",
+        color="canal",
+        color_discrete_map=CORES_CANAIS
+    )
+
+    fig_share.update_traces(
+        textinfo="label+percent",
+        hovertemplate=(
+            "Canal: %{label}<br>"
+            "Receita: R$ %{value:,.2f}<br>"
+            "Share: %{percent}"
+        )
+    )
+
+    fig_share.update_layout(
+        showlegend=True,
+        margin=dict(t=60, b=20, l=20, r=20)
+    )
+
+    st.plotly_chart(fig_share, use_container_width=True)
