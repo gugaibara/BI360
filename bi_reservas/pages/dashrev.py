@@ -97,9 +97,20 @@ df_hist = df_hist.rename(
 
 df_hist["mes_dt"] = pd.to_datetime(df_hist["mês"] + "-01")
 
-df_hist["cleaning_revenue"] = parse_brl(df_hist["cleaning_revenue"])
-df_hist["adm_fee"] = parse_brl(df_hist["adm_fee"])
-df_hist["price_less_comission"] = parse_brl(df_hist["price_less_comission"])
+df_hist["cleaning_revenue"] = pd.to_numeric(
+    df_hist["cleaning_revenue"],
+    errors="coerce"
+).fillna(0)
+
+df_hist["adm_fee"] = pd.to_numeric(
+    df_hist["adm_fee"],
+    errors="coerce"
+).fillna(0)
+
+df_hist["price_less_comission"] = pd.to_numeric(
+    df_hist["price_less_comission"],
+    errors="coerce"
+).fillna(0)
 
 # ======================
 # FILTRO DE MÊS (EXECUTIVO)
