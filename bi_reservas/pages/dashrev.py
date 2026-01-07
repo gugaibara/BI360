@@ -730,29 +730,78 @@ var_nivel_medio_m1 = (
 if kpis_m1:
     cards.append({
         "Comparação": "MoM",
+
+        # Receita
+        "Receita Atual": kpis_atual["receita"],
+        "Receita M-1": kpis_m1["receita"],
+        "Δ Receita": kpis_atual["receita"] - kpis_m1["receita"],
         "Receita (%)": variacao_pct(
             kpis_atual["receita"], kpis_m1["receita"]
         ),
-        "Ocupação (pp)": (
+
+        # Ocupação
+        "Ocupação Atual": kpis_atual["ocupacao"],
+        "Ocupação M-1": kpis_m1["ocupacao"],
+        "Δ Ocupação (pp)": (
             kpis_atual["ocupacao"] - kpis_m1["ocupacao"]
         ),
-        "Tarifa Média (%)": variacao_pct(
-            kpis_atual["tarifa_media"], kpis_m1["tarifa_media"]
+
+        # Tarifa
+        "Tarifa Atual": kpis_atual["tarifa_media"],
+        "Tarifa M-1": kpis_m1["tarifa_media"],
+        "Δ Tarifa": kpis_atual["tarifa_media"] - kpis_m1["tarifa_media"],
+
+        # Cleaning
+        "Cleaning Atual": (
+            kpis_hist_atual["cleaning"]
+            if kpis_hist_atual else None
         ),
-        "Cleaning Revenue (%)": (
-            variacao_pct(
-                kpis_hist_atual["cleaning"],
-                kpis_hist_m1["cleaning"]
-            ) if kpis_hist_m1 else None
+        "Cleaning M-1": (
+            kpis_hist_m1["cleaning"]
+            if kpis_hist_m1 else None
         ),
-        "Taxa Adm (%)": (
-            variacao_pct(
-                kpis_hist_atual["adm"],
-                kpis_hist_m1["adm"]
-            ) if kpis_hist_m1 else None
+        "Δ Cleaning": (
+            kpis_hist_atual["cleaning"] -
+            kpis_hist_m1["cleaning"]
+            if kpis_hist_m1 else None
         ),
-        "Atingimento Médio (pp)": var_ating_medio_m1,
-        "Nível Médio (Δ)": var_nivel_medio_m1
+
+        # Adm
+        "Adm Atual": (
+            kpis_hist_atual["adm"]
+            if kpis_hist_atual else None
+        ),
+        "Adm M-1": (
+            kpis_hist_m1["adm"]
+            if kpis_hist_m1 else None
+        ),
+        "Δ Adm": (
+            kpis_hist_atual["adm"] -
+            kpis_hist_m1["adm"]
+            if kpis_hist_m1 else None
+        ),
+
+        # Níveis
+        "Atingimento Médio Atual (%)": (
+            metricas_nivel_atual["atingimento_medio"] * 100
+            if metricas_nivel_atual["atingimento_medio"] else None
+        ),
+        "Atingimento Médio M-1 (%)": (
+            metricas_nivel_m1["atingimento_medio"] * 100
+            if metricas_nivel_m1["atingimento_medio"] else None
+        ),
+        "Δ Atingimento Médio (pp)": (
+            (metricas_nivel_atual["atingimento_medio"] -
+             metricas_nivel_m1["atingimento_medio"]) * 100
+            if metricas_nivel_m1["atingimento_medio"] else None
+        ),
+
+        "Nível Médio Atual": metricas_nivel_atual["nivel_medio"],
+        "Nível Médio M-1": metricas_nivel_m1["nivel_medio"],
+        "Δ Nível Médio": (
+            metricas_nivel_atual["nivel_medio"] -
+            metricas_nivel_m1["nivel_medio"]
+        )
     })
 
 # ======================
@@ -869,54 +918,28 @@ def grafico_historico_3m(
     valores,
     labels,
     nome_barra,
-    unidade_barra="",
-    unidade_delta="",
-    cor_barra="#2563eb",
-    cor_delta="#16a34a"
+    unidade="",
+    cor_barra="#2563eb"
 ):
-    delta = [None] + [
-        valores[i] - valores[i - 1]
-        for i in range(1, len(valores))
-    ]
+    # diferença do último mês
+    delta = valores[-1] - valores[-2] if len(valores) >= 2 else None
 
     fig = go.Figure()
 
-    # Barras — valores absolutos
     fig.add_bar(
         x=labels,
         y=valores,
         name=nome_barra,
         marker_color=cor_barra,
-        text=[f"{v:,.2f}{unidade_barra}" for v in valores],
+        text=[f"{v:,.2f}{unidade}" for v in valores],
         textposition="outside"
     )
 
-    # Linha — delta MoM
-    fig.add_scatter(
-        x=labels,
-        y=delta,
-        name="Δ MoM",
-        yaxis="y2",
-        mode="lines+markers+text",
-        line=dict(color=cor_delta, width=3),
-        text=[
-            f"{d:+,.2f}{unidade_delta}" if d is not None else "—"
-            for d in delta
-        ],
-        textposition="top center"
-    )
-
     fig.update_layout(
-        title=titulo,
+        title=f"{titulo}<br><sup>Δ último mês: {delta:+,.2f}{unidade if delta is not None else ''}</sup>",
         yaxis=dict(title=nome_barra),
-        yaxis2=dict(
-            title="Δ MoM",
-            overlaying="y",
-            side="right",
-            showgrid=False
-        ),
         legend_title="",
-        margin=dict(t=60, b=40)
+        margin=dict(t=80, b=40)
     )
 
     st.plotly_chart(fig, use_container_width=True)
