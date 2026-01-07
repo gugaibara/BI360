@@ -993,7 +993,6 @@ grafico_historico_3m(
     labels_3m,
     "Atingimento Médio (%)",
     unidade_barra="%",
-    unidade_delta=" pp"
 )
 
 st.subheader("🧭 Histórico — Nível Médio")
