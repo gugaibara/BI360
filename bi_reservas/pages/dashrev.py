@@ -805,62 +805,112 @@ if kpis_yoy:
         "Nível Médio (Δ)": var_nivel_medio_yoy
     })
 
+# ======================
+# DATAFRAME 3Meses
+# ======================
 
 df_comp = pd.DataFrame(cards)
 
-# ======================
-# FUNÇÃO GRÁFICO COMBO
-# ======================
+periodos_3m = [
+    periodo - 2,
+    periodo - 1,
+    periodo
+]
+
+labels_3m = [p.strftime("%b/%y") for p in periodos_3m]
+
+# Receita
+receita_3m = [
+    df_res_comp[df_res_comp["mes_dt"] == p]["valor_mes"].sum()
+    for p in periodos_3m
+]
+
+# Ocupação
+ocupacao_3m = []
+for p in periodos_3m:
+    k = calcular_kpis_mes(df_res_comp, p)
+    ocupacao_3m.append(k["ocupacao"] if k else 0)
+
+# Tarifa Média
+tarifa_3m = []
+for p in periodos_3m:
+    k = calcular_kpis_mes(df_res_comp, p)
+    tarifa_3m.append(k["tarifa_media"] if k else 0)
+
+# Cleaning
+cleaning_3m = [
+    calcular_kpis_hist_mes(df_hist_comp, p)["cleaning"] or 0
+    for p in periodos_3m
+]
+
+# Adm
+adm_3m = [
+    calcular_kpis_hist_mes(df_hist_comp, p)["adm"] or 0
+    for p in periodos_3m
+]
+
+# Atingimento Médio
+ating_3m = [
+    (calcular_metricas_nivel(df_res_comp, df_meta,
+     p, partner_sel)["atingimento_medio"] or 0) * 100
+    for p in periodos_3m
+]
+
+# Nível Médio
+nivel_3m = [
+    calcular_metricas_nivel(df_res_comp, df_meta, p, partner_sel)[
+        "nivel_medio"] or 0
+    for p in periodos_3m
+]
 
 
-def grafico_combo_historico(
+def grafico_historico_3m(
     titulo,
-    nome_valor,
-    valor_atual,
-    valor_ant,
+    valores,
+    labels,
+    nome_barra,
     unidade_barra="",
     unidade_delta="",
+    cor_barra="#2563eb",
     cor_delta="#16a34a"
 ):
-    if valor_ant is None:
-        st.info(f"Sem histórico suficiente para {titulo}.")
-        return
-
-    delta = valor_atual - valor_ant
+    delta = [None] + [
+        valores[i] - valores[i - 1]
+        for i in range(1, len(valores))
+    ]
 
     fig = go.Figure()
 
     # Barras — valores absolutos
     fig.add_bar(
-        x=["Mês Anterior", "Mês Atual"],
-        y=[valor_ant, valor_atual],
-        name=nome_valor,
-        marker_color=["#94a3b8", "#2563eb"],
-        text=[
-            f"{valor_ant:,.2f}{unidade_barra}",
-            f"{valor_atual:,.2f}{unidade_barra}"
-        ],
+        x=labels,
+        y=valores,
+        name=nome_barra,
+        marker_color=cor_barra,
+        text=[f"{v:,.2f}{unidade_barra}" for v in valores],
         textposition="outside"
     )
 
-    # Linha — diferença
+    # Linha — delta MoM
     fig.add_scatter(
-        x=["Mês Atual"],
-        y=[delta],
-        name="Δ",
+        x=labels,
+        y=delta,
+        name="Δ MoM",
         yaxis="y2",
         mode="lines+markers+text",
         line=dict(color=cor_delta, width=3),
-        marker=dict(size=8),
-        text=[f"{delta:+,.2f}{unidade_delta}"],
+        text=[
+            f"{d:+,.2f}{unidade_delta}" if d is not None else "—"
+            for d in delta
+        ],
         textposition="top center"
     )
 
     fig.update_layout(
         title=titulo,
-        yaxis=dict(title=nome_valor),
+        yaxis=dict(title=nome_barra),
         yaxis2=dict(
-            title="Diferença",
+            title="Δ MoM",
             overlaying="y",
             side="right",
             showgrid=False
@@ -872,76 +922,65 @@ def grafico_combo_historico(
     st.plotly_chart(fig, use_container_width=True)
 
 
-st.subheader("📊 Histórico — Receita")
-
-grafico_combo_historico(
-    titulo="Receita — Mês Atual vs Mês Anterior",
-    nome_valor="Receita (R$)",
-    valor_atual=kpis_atual["receita"],
-    valor_ant=kpis_m1["receita"] if kpis_m1 else None,
-    unidade_barra="",
-    unidade_delta=""
+st.subheader("📊 Histórico — Receita (Últimos 3 Meses)")
+grafico_historico_3m(
+    "Receita — Últimos 3 Meses",
+    receita_3m,
+    labels_3m,
+    "Receita (R$)"
 )
 
 st.subheader("🏨 Histórico — Ocupação")
-
-grafico_combo_historico(
-    titulo="Ocupação — Mês Atual vs Mês Anterior",
-    nome_valor="Ocupação (%)",
-    valor_atual=kpis_atual["ocupacao"],
-    valor_ant=kpis_m1["ocupacao"] if kpis_m1 else None,
+grafico_historico_3m(
+    "Ocupação — Últimos 3 Meses",
+    ocupacao_3m,
+    labels_3m,
+    "Ocupação (%)",
     unidade_barra="%",
     unidade_delta=" pp",
     cor_delta="#f97316"
 )
 
 st.subheader("📊 Histórico — Tarifa Média")
-
-grafico_combo_historico(
-    titulo="Tarifa Média — Mês Atual vs Mês Anterior",
-    nome_valor="Tarifa Média (R$)",
-    valor_atual=kpis_atual["tarifa_media"],
-    valor_ant=kpis_m1["tarifa_media"] if kpis_m1 else None
+grafico_historico_3m(
+    "Tarifa Média — Últimos 3 Meses",
+    tarifa_3m,
+    labels_3m,
+    "Tarifa Média (R$)"
 )
 
 st.subheader("🧹 Histórico — Cleaning Revenue")
-
-grafico_combo_historico(
-    titulo="Cleaning Revenue — Mês Atual vs Mês Anterior",
-    nome_valor="Cleaning Revenue (R$)",
-    valor_atual=kpis_hist_atual["cleaning"],
-    valor_ant=kpis_hist_m1["cleaning"] if kpis_hist_m1 else None
+grafico_historico_3m(
+    "Cleaning Revenue — Últimos 3 Meses",
+    cleaning_3m,
+    labels_3m,
+    "Cleaning Revenue (R$)"
 )
 
 st.subheader("🏷️ Histórico — Taxa Adm")
-
-grafico_combo_historico(
-    titulo="Taxa Adm — Mês Atual vs Mês Anterior",
-    nome_valor="Taxa Adm (R$)",
-    valor_atual=kpis_hist_atual["adm"],
-    valor_ant=kpis_hist_m1["adm"] if kpis_hist_m1 else None
+grafico_historico_3m(
+    "Taxa Adm — Últimos 3 Meses",
+    adm_3m,
+    labels_3m,
+    "Taxa Adm (R$)"
 )
 
 st.subheader("🎯 Histórico — Atingimento Médio")
-
-grafico_combo_historico(
-    titulo="Atingimento Médio — Mês Atual vs Mês Anterior",
-    nome_valor="Atingimento Médio (%)",
-    valor_atual=metricas_nivel_atual["atingimento_medio"] * 100
-    if metricas_nivel_atual["atingimento_medio"] else None,
-    valor_ant=metricas_nivel_m1["atingimento_medio"] * 100
-    if metricas_nivel_m1["atingimento_medio"] else None,
+grafico_historico_3m(
+    "Atingimento Médio — Últimos 3 Meses",
+    ating_3m,
+    labels_3m,
+    "Atingimento Médio (%)",
     unidade_barra="%",
     unidade_delta=" pp"
 )
 
 st.subheader("🧭 Histórico — Nível Médio")
-
-grafico_combo_historico(
-    titulo="Nível Médio — Mês Atual vs Mês Anterior",
-    nome_valor="Nível Médio",
-    valor_atual=metricas_nivel_atual["nivel_medio"],
-    valor_ant=metricas_nivel_m1["nivel_medio"] if metricas_nivel_m1 else None,
+grafico_historico_3m(
+    "Nível Médio — Últimos 3 Meses",
+    nivel_3m,
+    labels_3m,
+    "Nível Médio",
     cor_delta="#0ea5e9"
 )
 
