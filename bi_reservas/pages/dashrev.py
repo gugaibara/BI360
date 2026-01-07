@@ -959,9 +959,7 @@ grafico_historico_3m(
     ocupacao_3m,
     labels_3m,
     "Ocupação (%)",
-    unidade_barra="%",
-    unidade_delta=" pp",
-    cor_delta="#f97316"
+    unidade="%"
 )
 
 st.subheader("📊 Histórico — Tarifa Média")
@@ -1004,7 +1002,6 @@ grafico_historico_3m(
     nivel_3m,
     labels_3m,
     "Nível Médio",
-    cor_delta="#0ea5e9"
 )
 
 # ======================
