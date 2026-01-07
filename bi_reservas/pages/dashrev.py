@@ -809,134 +809,141 @@ if kpis_yoy:
 df_comp = pd.DataFrame(cards)
 
 # ======================
-# GRÁFICO CORE METRICS
+# FUNÇÃO GRÁFICO COMBO
 # ======================
 
-metricas_core = [
-    "Receita (%)",
-    "Ocupação (pp)",
-    "Tarifa Média (%)"
-]
 
-df_core = (
-    df_comp
-    .melt(
-        id_vars="Comparação",
-        value_vars=metricas_core,
-        var_name="Métrica",
-        value_name="Variação"
+def grafico_combo_historico(
+    titulo,
+    nome_valor,
+    valor_atual,
+    valor_ant,
+    unidade_barra="",
+    unidade_delta="",
+    cor_delta="#16a34a"
+):
+    if valor_ant is None:
+        st.info(f"Sem histórico suficiente para {titulo}.")
+        return
+
+    delta = valor_atual - valor_ant
+
+    fig = go.Figure()
+
+    # Barras — valores absolutos
+    fig.add_bar(
+        x=["Mês Anterior", "Mês Atual"],
+        y=[valor_ant, valor_atual],
+        name=nome_valor,
+        marker_color=["#94a3b8", "#2563eb"],
+        text=[
+            f"{valor_ant:,.2f}{unidade_barra}",
+            f"{valor_atual:,.2f}{unidade_barra}"
+        ],
+        textposition="outside"
     )
-)
 
-fig_core = px.bar(
-    df_core,
-    x="Métrica",
-    y="Variação",
-    color="Comparação",
-    barmode="group",
-    text="Variação",
-    title="Comparativo MoM x YoY — Performance Operacional"
-)
-
-fig_core.update_traces(
-    texttemplate="%{text:.1f}",
-    textposition="outside"
-)
-
-fig_core.update_layout(
-    yaxis_title="Variação",
-    xaxis_title="",
-    legend_title="",
-    margin=dict(t=60, b=40)
-)
-
-st.plotly_chart(fig_core, use_container_width=True)
-
-# ======================
-# GRÁFICO CLEANING + ADM
-# ======================
-
-metricas_custo = [
-    "Cleaning Revenue (%)",
-    "Taxa Adm (%)"
-]
-
-df_custo = (
-    df_comp
-    .melt(
-        id_vars="Comparação",
-        value_vars=metricas_custo,
-        var_name="Métrica",
-        value_name="Variação"
+    # Linha — diferença
+    fig.add_scatter(
+        x=["Mês Atual"],
+        y=[delta],
+        name="Δ",
+        yaxis="y2",
+        mode="lines+markers+text",
+        line=dict(color=cor_delta, width=3),
+        marker=dict(size=8),
+        text=[f"{delta:+,.2f}{unidade_delta}"],
+        textposition="top center"
     )
-)
 
-fig_custo = px.bar(
-    df_custo,
-    x="Métrica",
-    y="Variação",
-    color="Comparação",
-    barmode="group",
-    text="Variação",
-    title="Comparativo MoM x YoY — Custos"
-)
-
-fig_custo.update_traces(
-    texttemplate="%{text:.1f}",
-    textposition="outside"
-)
-
-fig_custo.update_layout(
-    yaxis_title="Variação",
-    xaxis_title="",
-    legend_title="",
-    margin=dict(t=60, b=40)
-)
-
-st.plotly_chart(fig_custo, use_container_width=True)
-
-# ======================
-# GRÁFICO NÍVEIS
-# ======================
-
-metricas_nivel = [
-    "Atingimento Médio (pp)",
-    "Nível Médio (Δ)"
-]
-
-df_nivel = (
-    df_comp
-    .melt(
-        id_vars="Comparação",
-        value_vars=metricas_nivel,
-        var_name="Métrica",
-        value_name="Variação"
+    fig.update_layout(
+        title=titulo,
+        yaxis=dict(title=nome_valor),
+        yaxis2=dict(
+            title="Diferença",
+            overlaying="y",
+            side="right",
+            showgrid=False
+        ),
+        legend_title="",
+        margin=dict(t=60, b=40)
     )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+
+st.subheader("📊 Histórico — Receita")
+
+grafico_combo_historico(
+    titulo="Receita — Mês Atual vs Mês Anterior",
+    nome_valor="Receita (R$)",
+    valor_atual=kpis_atual["receita"],
+    valor_ant=kpis_m1["receita"] if kpis_m1 else None,
+    unidade_barra="",
+    unidade_delta=""
 )
 
-fig_nivel = px.bar(
-    df_nivel,
-    x="Métrica",
-    y="Variação",
-    color="Comparação",
-    barmode="group",
-    text="Variação",
-    title="Comparativo MoM x YoY — Nível de Performance"
+st.subheader("🏨 Histórico — Ocupação")
+
+grafico_combo_historico(
+    titulo="Ocupação — Mês Atual vs Mês Anterior",
+    nome_valor="Ocupação (%)",
+    valor_atual=kpis_atual["ocupacao"],
+    valor_ant=kpis_m1["ocupacao"] if kpis_m1 else None,
+    unidade_barra="%",
+    unidade_delta=" pp",
+    cor_delta="#f97316"
 )
 
-fig_nivel.update_traces(
-    texttemplate="%{text:.2f}",
-    textposition="outside"
+st.subheader("📊 Histórico — Tarifa Média")
+
+grafico_combo_historico(
+    titulo="Tarifa Média — Mês Atual vs Mês Anterior",
+    nome_valor="Tarifa Média (R$)",
+    valor_atual=kpis_atual["tarifa_media"],
+    valor_ant=kpis_m1["tarifa_media"] if kpis_m1 else None
 )
 
-fig_nivel.update_layout(
-    yaxis_title="Variação",
-    xaxis_title="",
-    legend_title="",
-    margin=dict(t=60, b=40)
+st.subheader("🧹 Histórico — Cleaning Revenue")
+
+grafico_combo_historico(
+    titulo="Cleaning Revenue — Mês Atual vs Mês Anterior",
+    nome_valor="Cleaning Revenue (R$)",
+    valor_atual=kpis_hist_atual["cleaning"],
+    valor_ant=kpis_hist_m1["cleaning"] if kpis_hist_m1 else None
 )
 
-st.plotly_chart(fig_nivel, use_container_width=True)
+st.subheader("🏷️ Histórico — Taxa Adm")
+
+grafico_combo_historico(
+    titulo="Taxa Adm — Mês Atual vs Mês Anterior",
+    nome_valor="Taxa Adm (R$)",
+    valor_atual=kpis_hist_atual["adm"],
+    valor_ant=kpis_hist_m1["adm"] if kpis_hist_m1 else None
+)
+
+st.subheader("🎯 Histórico — Atingimento Médio")
+
+grafico_combo_historico(
+    titulo="Atingimento Médio — Mês Atual vs Mês Anterior",
+    nome_valor="Atingimento Médio (%)",
+    valor_atual=metricas_nivel_atual["atingimento_medio"] * 100
+    if metricas_nivel_atual["atingimento_medio"] else None,
+    valor_ant=metricas_nivel_m1["atingimento_medio"] * 100
+    if metricas_nivel_m1["atingimento_medio"] else None,
+    unidade_barra="%",
+    unidade_delta=" pp"
+)
+
+st.subheader("🧭 Histórico — Nível Médio")
+
+grafico_combo_historico(
+    titulo="Nível Médio — Mês Atual vs Mês Anterior",
+    nome_valor="Nível Médio",
+    valor_atual=metricas_nivel_atual["nivel_medio"],
+    valor_ant=metricas_nivel_m1["nivel_medio"] if metricas_nivel_m1 else None,
+    cor_delta="#0ea5e9"
+)
 
 # ======================
 # TABELA FINAL
