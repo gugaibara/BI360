@@ -133,13 +133,43 @@ if df_res_m.empty:
     st.stop()
 
 # ======================
-# CHECK VISUAL (TEMPORÁRIO)
+# KPIs EXECUTIVOS — MÊS
 # ======================
 
-st.info(
-    f"""
-    **Bases carregadas com sucesso**
-    - Reservas: {len(df_res_m)} linhas
-    - Histórico Unidades: {len(df_hist_m)} linhas
-    """
+st.markdown("### 📌 Resultados do Mês")
+
+# ---- Base Reservas ----
+periodo = pd.Period(mes_sel, freq="M")
+dias_mes = periodo.days_in_month
+
+receita_total = df_res_m["valor_mes"].sum()
+noites_ocupadas = df_res_m["noites_mes"].sum()
+
+unidades = (
+    df_res_m[["id_propriedade", "unidade"]]
+    .drop_duplicates()
+    .shape[0]
 )
+
+ocupacao = (
+    (noites_ocupadas / (unidades * dias_mes)) * 100
+    if unidades > 0 else 0
+)
+
+tarifa_media = (
+    receita_total / noites_ocupadas
+    if noites_ocupadas > 0 else 0
+)
+
+# ---- Base Histórico Unidades ----
+cleaning_revenue = df_hist_m["cleaning_revenue"].sum()
+taxa_adm = df_hist_m["adm_360"].sum()
+
+# ---- Layout KPIs ----
+k1, k2, k3, k4, k5 = st.columns(5)
+
+k1.metric("💰 Receita Total", f"R$ {receita_total:,.2f}")
+k2.metric("🏨 Ocupação", f"{ocupacao:.1f}%")
+k3.metric("📊 Tarifa Média", f"R$ {tarifa_media:,.2f}")
+k4.metric("🧹 Cleaning Revenue", f"R$ {cleaning_revenue:,.2f}")
+k5.metric("🏷️ Taxa Adm", f"R$ {taxa_adm:,.2f}")
