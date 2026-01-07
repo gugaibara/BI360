@@ -366,6 +366,10 @@ metricas_nivel_yoy = calcular_metricas_nivel(
 # KPIs DE RESERVAS
 # ======================
 
+st.write("mes_sel:", mes_sel)
+st.write("mes_yoy:", mes_yoy)
+st.write("mes únicos:", sorted(df_res["mes"].unique()))
+
 kpis_atual = calcular_kpis_mes(df_res_comp, mes_sel)
 kpis_m1 = calcular_kpis_mes(df_res_comp, mes_m1)
 kpis_yoy = calcular_kpis_mes(df_res_comp, mes_yoy)
