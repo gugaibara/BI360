@@ -210,16 +210,107 @@ with st.sidebar:
 
 df_f = df.copy()
 
-st.title("📊 BI de Reservas")
+st.markdown(
+    """
+    <style>
+    .header-container {
+        background: linear-gradient(90deg, #0f2027, #203a43, #2c5364);
+        padding: 24px 28px;
+        border-radius: 18px;
+        margin-bottom: 24px;
+    }
+    .header-title {
+        font-size: 34px;
+        font-weight: 700;
+        color: white;
+    }
+    .header-subtitle {
+        font-size: 14px;
+        color: #d1d5db;
+        margin-top: 4px;
+    }
+    .filter-card {
+        background-color: #111827;
+        padding: 14px 18px;
+        border-radius: 14px;
+        border: 1px solid #1f2937;
+    }
+    .filter-label {
+        font-size: 12px;
+        color: #9ca3af;
+    }
+    .filter-value {
+        font-size: 20px;
+        font-weight: 600;
+        color: white;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
+# Header
+st.markdown(
+    """
+    <div class="header-container">
+        <div class="header-title">📊 BI de Reservas</div>
+        <div class="header-subtitle">
+            Visão consolidada de performance operacional
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+# Filtros aplicados
 st.markdown("### 🔎 Filtros Aplicados")
 
 f1, f2, f3, f4 = st.columns(4)
 
-f1.metric("Partner", partner)
-f2.metric("Mês", mes)
-f3.metric("Prédio", propriedade)
-f4.metric("Unidade", unidade)
+with f1:
+    st.markdown(
+        f"""
+        <div class="filter-card">
+            <div class="filter-label">Partner</div>
+            <div class="filter-value">{partner}</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+with f2:
+    st.markdown(
+        f"""
+        <div class="filter-card">
+            <div class="filter-label">Mês</div>
+            <div class="filter-value">{mes}</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+with f3:
+    st.markdown(
+        f"""
+        <div class="filter-card">
+            <div class="filter-label">Prédio</div>
+            <div class="filter-value">{propriedade}</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+with f4:
+    st.markdown(
+        f"""
+        <div class="filter-card">
+            <div class="filter-label">Unidade</div>
+            <div class="filter-value">{unidade}</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
 
 if partner != "Todos":
     df_f = df_f[df_f["partner"] == partner]
@@ -247,7 +338,7 @@ reservas, ocupacao, receita_total, receita_diarias, receita_limpeza = (
     calcular_kpis(df_f, mes)
 )
 
-st.subheader("📌 Indicadores do Mês")
+st.markdown("### 📌 Indicadores do Mês")
 
 k1, k2, k3, k4, k5 = st.columns(5)
 
