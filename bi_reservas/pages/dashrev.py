@@ -24,6 +24,17 @@ CORES_CANAIS = {
     "Expedia": "#EEFF00"
 }
 
+CORES_NIVEIS = {
+    "Nível 5": "#16a34a",   # verde forte (excelente)
+    "Nível 4": "#4ade80",   # verde claro
+    "Nível 3": "#facc15",   # amarelo
+    "Nível 2": "#fb923c",   # laranja
+    "Nível 1": "#ef4444",   # vermelho
+    "Sem Meta": "#9ca3af"   # cinza
+}
+
+COR_SHARE = "#38bdf8"  # azul claro executivo
+
 # ======================
 # FUNÇÕES DE CARGA
 # ======================
@@ -389,8 +400,10 @@ fig.add_trace(
         x=dist_niveis["nivel"],
         y=dist_niveis["unidades"],
         name="Nº de Unidades",
+        marker_color=[CORES_NIVEIS[n] for n in dist_niveis["nivel"]],
         text=dist_niveis["unidades"],
-        textposition="outside"
+        textposition="outside",
+        opacity=0.9
     )
 )
 
@@ -402,22 +415,31 @@ fig.add_trace(
         name="Share (%)",
         yaxis="y2",
         mode="lines+markers",
-        text=(dist_niveis["share"] * 100).round(1),
+        line=dict(color="#38bdf8", width=3),
+        marker=dict(size=8),
         hovertemplate="Share: %{y:.1f}%"
     )
 )
 
 fig.update_layout(
     yaxis=dict(
-        title="Nº de Unidades"
+        title="Nº de Unidades",
+        showgrid=True,
+        gridcolor="rgba(255,255,255,0.08)"
     ),
     yaxis2=dict(
         title="Share (%)",
         overlaying="y",
         side="right",
-        range=[0, 100]
+        range=[0, max(dist_niveis["share"] * 100) * 1.2],
+        showgrid=False
     ),
-    legend=dict(orientation="h", y=1.15),
+    legend=dict(
+        orientation="h",
+        y=1.15,
+        x=0.01
+    ),
+    bargap=0.25,
     margin=dict(t=80, b=40, l=40, r=40)
 )
 
