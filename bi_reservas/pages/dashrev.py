@@ -381,8 +381,16 @@ kpis_hist_yoy = calcular_kpis_hist_mes(df_hist_comp, mes_yoy)
 # ======================
 
 def variacao_pct(atual, anterior):
-    if anterior in (None, 0) or pd.isna(anterior):
+    if (
+        atual is None or
+        anterior is None or
+        atual == 0 or
+        anterior == 0 or
+        pd.isna(atual) or
+        pd.isna(anterior)
+    ):
         return None
+
     return ((atual / anterior) - 1) * 100
 
 
