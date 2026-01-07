@@ -392,6 +392,12 @@ kpis_hist_atual = calcular_kpis_hist_mes(df_hist_comp, periodo)
 kpis_hist_m1 = calcular_kpis_hist_mes(df_hist_comp, periodo_m1)
 kpis_hist_yoy = calcular_kpis_hist_mes(df_hist_comp, periodo_yoy)
 
+cleaning_atual = kpis_hist_atual.get("cleaning") if kpis_hist_atual else None
+cleaning_m1 = kpis_hist_m1.get("cleaning") if kpis_hist_m1 else None
+
+adm_atual = kpis_hist_atual.get("adm") if kpis_hist_atual else None
+adm_m1 = kpis_hist_m1.get("adm") if kpis_hist_m1 else None
+
 # ======================
 # FUNÇÃO DE VARIAÇÃO %
 # ======================
@@ -399,15 +405,13 @@ kpis_hist_yoy = calcular_kpis_hist_mes(df_hist_comp, periodo_yoy)
 
 def variacao_pct(atual, anterior):
     if (
-        atual is None or
         anterior is None or
-        atual == 0 or
         anterior == 0 or
+        atual is None or
         pd.isna(atual) or
         pd.isna(anterior)
     ):
         return None
-
     return ((atual / anterior) - 1) * 100
 
 
@@ -752,33 +756,21 @@ if kpis_m1:
         "Δ Tarifa": kpis_atual["tarifa_media"] - kpis_m1["tarifa_media"],
 
         # Cleaning
-        "Cleaning Atual": (
-            kpis_hist_atual["cleaning"]
-            if kpis_hist_atual else None
-        ),
-        "Cleaning M-1": (
-            kpis_hist_m1["cleaning"]
-            if kpis_hist_m1 else None
-        ),
+        "Cleaning Atual": cleaning_atual,
+        "Cleaning M-1": cleaning_m1,
         "Δ Cleaning": (
-            kpis_hist_atual["cleaning"] -
-            kpis_hist_m1["cleaning"]
-            if kpis_hist_m1 else None
+            cleaning_atual - cleaning_m1
+            if cleaning_atual is not None and cleaning_m1 is not None
+            else None
         ),
 
         # Adm
-        "Adm Atual": (
-            kpis_hist_atual["adm"]
-            if kpis_hist_atual else None
-        ),
-        "Adm M-1": (
-            kpis_hist_m1["adm"]
-            if kpis_hist_m1 else None
-        ),
+        "Adm Atual": adm_atual,
+        "Adm M-1": adm_m1,
         "Δ Adm": (
-            kpis_hist_atual["adm"] -
-            kpis_hist_m1["adm"]
-            if kpis_hist_m1 else None
+            adm_atual - adm_m1
+            if adm_atual is not None and adm_m1 is not None
+            else None
         ),
 
         # Níveis
@@ -1031,13 +1023,40 @@ else:
     st.markdown("#### 📋 Tabela de Comparativos Temporais")
     st.dataframe(
         df_comp_safe.style.format({
+            # Receita
+            "Receita Atual": "R$ {:,.0f}",
+            "Receita M-1": "R$ {:,.0f}",
+            "Δ Receita": "{:+,.0f}",
             "Receita (%)": "{:+.1f}%",
-            "Ocupação (pp)": "{:+.1f} pp",
-            "Tarifa Média (%)": "{:+.1f}%",
-            "Cleaning Revenue (%)": "{:+.1f}%",
-            "Taxa Adm (%)": "{:+.1f}%",
-            "Atingimento Médio (pp)": "{:+.1f} pp",
-            "Nível Médio (Δ)": "{:+.2f}"
+
+            # Ocupação
+            "Ocupação Atual": "{:.1f}%",
+            "Ocupação M-1": "{:.1f}%",
+            "Δ Ocupação (pp)": "{:+.1f} pp",
+
+            # Tarifa
+            "Tarifa Atual": "R$ {:,.2f}",
+            "Tarifa M-1": "R$ {:,.2f}",
+            "Δ Tarifa": "{:+,.2f}",
+
+            # Cleaning
+            "Cleaning Atual": "R$ {:,.0f}",
+            "Cleaning M-1": "R$ {:,.0f}",
+            "Δ Cleaning": "{:+,.0f}",
+
+            # Adm
+            "Adm Atual": "R$ {:,.0f}",
+            "Adm M-1": "R$ {:,.0f}",
+            "Δ Adm": "{:+,.0f}",
+
+            # Níveis
+            "Atingimento Médio Atual (%)": "{:.1f}%",
+            "Atingimento Médio M-1 (%)": "{:.1f}%",
+            "Δ Atingimento Médio (pp)": "{:+.1f} pp",
+
+            "Nível Médio Atual": "{:.2f}",
+            "Nível Médio M-1": "{:.2f}",
+            "Δ Nível Médio": "{:+.2f}"
         }),
         use_container_width=True,
         hide_index=True
