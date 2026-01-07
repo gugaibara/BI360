@@ -404,8 +404,15 @@ k1, k2, k3, k4, k5 = st.columns(5)
 k1.metric("💰 Receita Total", f"R$ {receita_total:,.2f}")
 k2.metric("🏨 Ocupação", f"{ocupacao:.1f}%")
 k3.metric("📊 Tarifa Média", f"R$ {tarifa_media:,.2f}")
-k4.metric("🧹 Cleaning Revenue", f"R$ {cleaning_revenue:,.2f}")
-k5.metric("🏷️ Taxa Adm", f"R$ {taxa_adm:,.2f}")
+k4.metric(
+    "🧹 Cleaning Revenue",
+    f"R$ {cleaning_revenue:,.2f}" if cleaning_revenue > 0 else "—"
+)
+k5.metric(
+    "🏷️ Taxa Adm",
+    f"R$ {taxa_adm:,.2f}" if taxa_adm > 0 else "—"
+)
+
 
 # ======================
 # SHARE DE CANAL
@@ -763,8 +770,27 @@ df_comp = pd.DataFrame(cards)
 if df_comp.empty:
     st.info("Não há dados suficientes para comparativos temporais.")
 else:
+    df_comp_safe = df_comp.copy()
+
+    colunas_formatadas = [
+        "Receita (%)",
+        "Ocupação (pp)",
+        "Tarifa Média (%)",
+        "Cleaning Revenue (%)",
+        "Taxa Adm (%)",
+        "Nível Médio (pp)"
+    ]
+
+    colunas_existentes = [
+        c for c in colunas_formatadas
+        if c in df_comp_safe.columns
+    ]
+
+    df_comp_safe[colunas_existentes] = df_comp_safe[colunas_existentes].astype(
+        float)
+
     st.dataframe(
-        df_comp.style.format({
+        df_comp_safe.style.format({
             "Receita (%)": "{:+.1f}%",
             "Ocupação (pp)": "{:+.1f} pp",
             "Tarifa Média (%)": "{:+.1f}%",
