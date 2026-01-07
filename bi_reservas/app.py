@@ -212,12 +212,14 @@ df_f = df.copy()
 
 st.title("📊 BI de Reservas")
 
-st.caption(
-    f"Partner: {partner} | "
-    f"Mês: {mes} | "
-    f"Prédio: {propriedade} | "
-    f"Unidade: {unidade}"
-)
+st.markdown("### 🔎 Filtros Aplicados")
+
+f1, f2, f3, f4 = st.columns(4)
+
+f1.metric("Partner", partner)
+f2.metric("Mês", mes)
+f3.metric("Prédio", propriedade)
+f4.metric("Unidade", unidade)
 
 if partner != "Todos":
     df_f = df_f[df_f["partner"] == partner]
