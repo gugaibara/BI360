@@ -66,6 +66,10 @@ def load_data():
     ws_res = sh.worksheet(st.secrets["google_sheets"]["sheet_name"])
     df_res = pd.DataFrame(ws_res.get_all_records())
     df_res.columns = df_res.columns.str.strip()
+    df_res["mes_dt"] = pd.to_datetime(
+        df_res["mes"].astype(str),
+        errors="coerce"
+    ).dt.to_period("M")
 
     # ---- Aba Histórico Unidades ----
     ws_hist = sh.worksheet("Histórico Unidades")
@@ -88,6 +92,12 @@ df_res, df_hist, df_meta = load_data()
 
 df_res["partner"] = df_res["partner"].astype(str).str.strip()
 df_hist["partnership"] = df_hist["partnership"].astype(str).str.strip()
+
+df_hist["mes_dt"] = pd.to_datetime(
+    df_hist["mês"].astype(str),
+    errors="coerce"
+).dt.to_period("M")
+
 
 # ======================
 # NORMALIZAÇÃO — FUNÇÕES
@@ -131,9 +141,6 @@ def classificar_nivel(atingimento):
 # ======================
 # NORMALIZAÇÃO — RESERVAS
 # ======================
-
-
-df_res["mes_dt"] = pd.to_datetime(df_res["mes"] + "-01")
 
 df_res["valor_mes"] = parse_brl(df_res["valor_mes"])
 df_res["limpeza_mes"] = parse_brl(df_res["limpeza_mes"])
@@ -195,9 +202,12 @@ with c2:
     )
 
 # ---- aplica filtros ----
-df_res_m = df_res[df_res["mes"] == mes_sel]
+periodo_sel = pd.Period(mes_sel, freq="M")
+
+df_res_m = df_res[df_res["mes_dt"] == periodo_sel]
+
 df_hist_m = df_hist[
-    (df_hist["mês"] == mes_sel) &
+    (df_hist["mes_dt"] == periodo_sel) &
     (df_hist["partnership"].notna())
 ]
 
@@ -217,14 +227,13 @@ if df_res_m.empty:
 st.markdown("### 📌 Resultados do Mês")
 
 
-def calcular_kpis_mes(df, mes):
-    df_m = df[df["mes"] == mes]
+def calcular_kpis_mes(df, periodo):
+    df_m = df[df["mes_dt"] == periodo]
 
     if df_m.empty:
         return None
 
-    periodo_tmp = pd.Period(mes, freq="M")
-    dias_mes_tmp = periodo_tmp.days_in_month
+    dias_mes_tmp = periodo.days_in_month
 
     receita = df_m["valor_mes"].sum()
     noites = df_m["noites_mes"].sum()
@@ -249,14 +258,11 @@ def calcular_kpis_mes(df, mes):
     }
 
 
-def calcular_kpis_hist_mes(df_hist, mes):
-    df_m = df_hist[df_hist["mês"] == mes]
+def calcular_kpis_hist_mes(df_hist, periodo):
+    df_m = df_hist[df_hist["mes_dt"] == periodo]
 
     if df_m.empty:
-        return {
-            "cleaning": None,
-            "adm": None
-        }
+        return {"cleaning": None, "adm": None}
 
     return {
         "cleaning": df_m["cleaning_revenue"].sum(),
@@ -264,9 +270,9 @@ def calcular_kpis_hist_mes(df_hist, mes):
     }
 
 
-def calcular_metricas_nivel(df_res, df_meta, mes, partner_sel):
+def calcular_metricas_nivel(df_res, df_meta, periodo, partner_sel):
     # filtra reservas do mês
-    df_m = df_res[df_res["mes"] == mes].copy()
+    df_m = df_res[df_res["mes_dt"] == periodo].copy()
 
     if partner_sel != "Todos":
         df_m = df_m[df_m["partner"] == partner_sel]
@@ -342,37 +348,32 @@ if partner_sel != "Todos":
 
 periodo = pd.Period(mes_sel, freq="M")
 
-mes_m1 = (periodo - 1).strftime("%Y-%m")
-mes_yoy = (periodo - 12).strftime("%Y-%m")
-
+periodo_m1 = periodo - 1
+periodo_yoy = periodo - 12
 
 # ======================
 # NÍVEL MÉDIO (ATUAL / M1 / YOY)
 # ======================
 
 metricas_nivel_atual = calcular_metricas_nivel(
-    df_res_comp, df_meta, mes_sel, partner_sel
+    df_res_comp, df_meta, periodo, partner_sel
 )
 
 metricas_nivel_m1 = calcular_metricas_nivel(
-    df_res_comp, df_meta, mes_m1, partner_sel
+    df_res_comp, df_meta, periodo_m1, partner_sel
 )
 
 metricas_nivel_yoy = calcular_metricas_nivel(
-    df_res_comp, df_meta, mes_yoy, partner_sel
+    df_res_comp, df_meta, periodo_yoy, partner_sel
 )
 
 # ======================
 # KPIs DE RESERVAS
 # ======================
 
-st.write("mes_sel:", mes_sel)
-st.write("mes_yoy:", mes_yoy)
-st.write("mes únicos:", sorted(df_res["mes"].unique()))
-
-kpis_atual = calcular_kpis_mes(df_res_comp, mes_sel)
-kpis_m1 = calcular_kpis_mes(df_res_comp, mes_m1)
-kpis_yoy = calcular_kpis_mes(df_res_comp, mes_yoy)
+kpis_atual = calcular_kpis_mes(df_res_comp, periodo)
+kpis_m1 = calcular_kpis_mes(df_res_comp, periodo_m1)
+kpis_yoy = calcular_kpis_mes(df_res_comp, periodo_yoy)
 
 if kpis_atual is None:
     st.warning("Sem dados para os filtros selecionados.")
@@ -387,14 +388,14 @@ tarifa_media = kpis_atual["tarifa_media"]
 # KPIs HISTÓRICOS (CLEANING / ADM)
 # ======================
 
-kpis_hist_atual = calcular_kpis_hist_mes(df_hist_comp, mes_sel)
-kpis_hist_m1 = calcular_kpis_hist_mes(df_hist_comp, mes_m1)
-kpis_hist_yoy = calcular_kpis_hist_mes(df_hist_comp, mes_yoy)
-
+kpis_hist_atual = calcular_kpis_hist_mes(df_hist_comp, periodo)
+kpis_hist_m1 = calcular_kpis_hist_mes(df_hist_comp, periodo_m1)
+kpis_hist_yoy = calcular_kpis_hist_mes(df_hist_comp, periodo_yoy)
 
 # ======================
 # FUNÇÃO DE VARIAÇÃO %
 # ======================
+
 
 def variacao_pct(atual, anterior):
     if (
@@ -708,7 +709,10 @@ cards = []
 var_ating_medio_m1 = (
     (metricas_nivel_atual["atingimento_medio"] -
      metricas_nivel_m1["atingimento_medio"]) * 100
-    if metricas_nivel_m1["atingimento_medio"] is not None else None
+    if (
+        metricas_nivel_atual["atingimento_medio"] is not None and
+        metricas_nivel_m1["atingimento_medio"] is not None
+    ) else None
 )
 
 # Nível médio (diferença absoluta)
