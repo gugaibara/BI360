@@ -67,6 +67,26 @@ df_res, df_hist, df_meta = load_data()
 # ======================
 
 
+def parse_brl(series):
+    return (
+        series.astype(str)
+        .str.strip()
+        .str.replace("\u00a0", "", regex=False)
+        .str.replace(".", "", regex=False)
+        .str.replace(",", ".", regex=False)
+        .str.replace(r"[^\d.-]", "", regex=True)
+        .replace("", "0")
+        .astype(float)
+    )
+
+# ======================
+# NORMALIZAÇÃO — BASE NÍVEIS
+# ======================
+
+
+df_meta["receita_esperada"] = parse_brl(df_meta["receita_esperada"])
+
+
 def classificar_nivel(atingimento):
     if atingimento >= 1.15:
         return "Nível 5"
@@ -79,18 +99,6 @@ def classificar_nivel(atingimento):
     else:
         return "Nível 1"
 
-
-def parse_brl(series):
-    return (
-        series.astype(str)
-        .str.strip()
-        .str.replace("\u00a0", "", regex=False)
-        .str.replace(".", "", regex=False)
-        .str.replace(",", ".", regex=False)
-        .str.replace(r"[^\d.-]", "", regex=True)
-        .replace("", "0")
-        .astype(float)
-    )
 
 # ======================
 # NORMALIZAÇÃO — RESERVAS
