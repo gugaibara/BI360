@@ -87,23 +87,19 @@ df_res["noites_mes"] = (
 # ======================
 
 # padroniza nomes para bater com reservas
-df_hist = df_hist.rename(
-    columns={
-        "unit_name": "unidade",
-        "property_name": "propriedade",
-        "adm 360": "adm_fee"
-    }
+df_hist.columns = (
+    df_hist.columns
+    .str.strip()
+    .str.lower()
 )
-
-df_hist["mes_dt"] = pd.to_datetime(df_hist["mês"] + "-01")
 
 df_hist["cleaning_revenue"] = pd.to_numeric(
     df_hist["cleaning_revenue"],
     errors="coerce"
 ).fillna(0)
 
-df_hist["adm_fee"] = pd.to_numeric(
-    df_hist["adm_fee"],
+df_hist["adm_360"] = pd.to_numeric(
+    df_hist["adm_360"],
     errors="coerce"
 ).fillna(0)
 
