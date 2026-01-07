@@ -243,3 +243,29 @@ else:
     )
 
     st.plotly_chart(fig_share, use_container_width=True)
+
+# ======================
+# TABELA — SHARE DE CANAL
+# ======================
+
+st.markdown("#### 📋 Receita por Canal")
+
+tabela_share = canal_share.copy()
+
+tabela_share["Receita (R$)"] = tabela_share["valor_mes"]
+tabela_share["Share (%)"] = tabela_share["share"] * 100
+
+tabela_share = (
+    tabela_share[["canal", "Receita (R$)", "Share (%)"]]
+    .sort_values("Receita (R$)", ascending=False)
+    .reset_index(drop=True)
+)
+
+st.dataframe(
+    tabela_share.style.format({
+        "Receita (R$)": "R$ {:,.2f}",
+        "Share (%)": "{:.1f}%"
+    }),
+    use_container_width=True,
+    hide_index=True
+)
