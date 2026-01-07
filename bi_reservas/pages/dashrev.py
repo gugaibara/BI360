@@ -75,6 +75,13 @@ def load_data():
 df_res, df_hist, df_meta = load_data()
 
 # ======================
+# NORMALIZAÇÃO DE PARTNER
+# ======================
+
+df_res["partner"] = df_res["partner"].astype(str).str.strip()
+df_hist["partnership"] = df_hist["partnership"].astype(str).str.strip()
+
+# ======================
 # NORMALIZAÇÃO — FUNÇÕES
 # ======================
 
@@ -200,28 +207,74 @@ if df_res_m.empty:
 
 st.markdown("### 📌 Resultados do Mês")
 
-# ---- Base Reservas ----
+# ======================
+# KPIs COMPARATIVOS
+# ======================
+
+
+def calcular_kpis_mes(df, mes):
+    df_m = df[df["mes"] == mes]
+
+    if df_m.empty:
+        return None
+
+    periodo_tmp = pd.Period(mes, freq="M")
+    dias_mes_tmp = periodo_tmp.days_in_month
+
+    receita = df_m["valor_mes"].sum()
+    noites = df_m["noites_mes"].sum()
+
+    unidades_tmp = (
+        df_m[["id_propriedade", "unidade"]]
+        .drop_duplicates()
+        .shape[0]
+    )
+
+    ocupacao = (
+        (noites / (unidades_tmp * dias_mes_tmp)) * 100
+        if unidades_tmp > 0 else 0
+    )
+
+    tarifa_media = receita / noites if noites > 0 else 0
+
+    return {
+        "receita": receita,
+        "ocupacao": ocupacao,
+        "tarifa_media": tarifa_media
+    }
+
+
+df_res_comp = df_res.copy()
+
+if partner_sel != "Todos":
+    df_res_comp = df_res_comp[df_res_comp["partner"] == partner_sel]
+
+# ======================
+# KPIs (BASE ÚNICA)
+# ======================
+
 periodo = pd.Period(mes_sel, freq="M")
-dias_mes = periodo.days_in_month
+mes_m1 = str(periodo - 1)
+mes_yoy = str(periodo - 12)
 
-receita_total = df_res_m["valor_mes"].sum()
-noites_ocupadas = df_res_m["noites_mes"].sum()
+kpis_atual = calcular_kpis_mes(df_res_comp, mes_sel)
+kpis_m1 = calcular_kpis_mes(df_res_comp, mes_m1)
+kpis_yoy = calcular_kpis_mes(df_res_comp, mes_yoy)
 
-unidades = (
-    df_res_m[["id_propriedade", "unidade"]]
-    .drop_duplicates()
-    .shape[0]
-)
+if kpis_atual is None:
+    st.warning("Sem dados para os filtros selecionados.")
+    st.stop()
 
-ocupacao = (
-    (noites_ocupadas / (unidades * dias_mes)) * 100
-    if unidades > 0 else 0
-)
+receita_total = kpis_atual["receita"]
+ocupacao = kpis_atual["ocupacao"]
+tarifa_media = kpis_atual["tarifa_media"]
 
-tarifa_media = (
-    receita_total / noites_ocupadas
-    if noites_ocupadas > 0 else 0
-)
+
+def variacao_pct(atual, anterior):
+    if anterior in (None, 0) or pd.isna(anterior):
+        return None
+    return ((atual / anterior) - 1) * 100
+
 
 # ---- Base Histórico Unidades ----
 cleaning_revenue = df_hist_m["cleaning_revenue"].sum()
@@ -286,27 +339,28 @@ else:
 # TABELA — SHARE DE CANAL
 # ======================
 
-st.markdown("#### 📋 Receita por Canal")
+if total_receita > 0:
+    st.markdown("#### 📋 Receita por Canal")
 
-tabela_share = canal_share.copy()
+    tabela_share = canal_share.copy()
 
-tabela_share["Receita (R$)"] = tabela_share["valor_mes"]
-tabela_share["Share (%)"] = tabela_share["share"] * 100
+    tabela_share["Receita (R$)"] = tabela_share["valor_mes"]
+    tabela_share["Share (%)"] = tabela_share["share"] * 100
 
-tabela_share = (
-    tabela_share[["canal", "Receita (R$)", "Share (%)"]]
-    .sort_values("Receita (R$)", ascending=False)
-    .reset_index(drop=True)
-)
+    tabela_share = (
+        tabela_share[["canal", "Receita (R$)", "Share (%)"]]
+        .sort_values("Receita (R$)", ascending=False)
+        .reset_index(drop=True)
+    )
 
-st.dataframe(
-    tabela_share.style.format({
-        "Receita (R$)": "R$ {:,.2f}",
-        "Share (%)": "{:.1f}%"
-    }),
-    use_container_width=True,
-    hide_index=True
-)
+    st.dataframe(
+        tabela_share.style.format({
+            "Receita (R$)": "R$ {:,.2f}",
+            "Share (%)": "{:.1f}%"
+        }),
+        use_container_width=True,
+        hide_index=True
+    )
 
 # ======================
 # DISTRIBUIÇÃO DE NÍVEIS
@@ -327,29 +381,30 @@ diarias_unidade["receita_diarias"] = (
     diarias_unidade["limpeza_mes"]
 )
 
-meta_base = df_meta.copy()
-
 nivel_base = diarias_unidade.merge(
-    meta_base,
+    df_meta,
     on=["propriedade", "unidade"],
     how="left"
 )
 
-nivel_base["atingimento"] = nivel_base.apply(
-    lambda r: r["receita_diarias"] / r["receita_esperada"]
-    if pd.notna(r["receita_esperada"]) and r["receita_esperada"] > 0
-    else None,
-    axis=1
+nivel_base["atingimento"] = None
+
+mask = nivel_base["receita_esperada"] > 0
+
+nivel_base.loc[mask, "atingimento"] = (
+    nivel_base.loc[mask, "receita_diarias"] /
+    nivel_base.loc[mask, "receita_esperada"]
 )
 
+nivel_base["nivel"] = "Sem Meta"
 
-def definir_nivel(row):
-    if pd.isna(row["receita_esperada"]) or row["receita_esperada"] == 0:
-        return "Sem Meta"
-    return classificar_nivel(row["atingimento"])
+mask_meta = nivel_base["receita_esperada"] > 0
 
+nivel_base.loc[mask_meta, "nivel"] = (
+    nivel_base.loc[mask_meta, "atingimento"]
+    .apply(classificar_nivel)
+)
 
-nivel_base["nivel"] = nivel_base.apply(definir_nivel, axis=1)
 
 # ======================
 # AGREGAÇÃO POR NÍVEL
@@ -366,7 +421,10 @@ dist_niveis = (
 
 total_unidades = dist_niveis["unidades"].sum()
 
-dist_niveis["share"] = dist_niveis["unidades"] / total_unidades
+if total_unidades > 0:
+    dist_niveis["share"] = dist_niveis["unidades"] / total_unidades
+else:
+    dist_niveis["share"] = 0
 
 ordem_niveis = [
     "Nível 5",
@@ -421,6 +479,11 @@ fig.add_trace(
     )
 )
 
+max_share = (
+    dist_niveis["share"].max() * 100
+    if not dist_niveis.empty else 100
+)
+
 fig.update_layout(
     yaxis=dict(
         title="Nº de Unidades",
@@ -431,7 +494,7 @@ fig.update_layout(
         title="Share (%)",
         overlaying="y",
         side="right",
-        range=[0, max(dist_niveis["share"] * 100) * 1.2],
+        range=[0, max_share * 1.2],
         showgrid=False
     ),
     legend=dict(
@@ -475,41 +538,53 @@ st.dataframe(
 )
 
 # ======================
-# TABELA DE VALIDAÇÃO — UNIDADES
+# COMPARATIVOS TEMPORAIS
 # ======================
 
 st.divider()
-st.subheader("🔎 Validação de Atingimento por Unidade")
+st.subheader("📈 Comparativos Temporais")
 
-tabela_validacao = nivel_base.copy()
+dados_comp = []
 
-tabela_validacao = tabela_validacao[
-    [
-        "unidade",
-        "receita_diarias",
-        "receita_esperada",
-        "atingimento",
-        "nivel"
-    ]
-].sort_values("atingimento", ascending=False)
+if kpis_m1:
+    dados_comp.append({
+        "Comparação": "vs Mês Anterior",
+        "Receita (%)": variacao_pct(
+            kpis_atual["receita"], kpis_m1["receita"]
+        ),
+        "Ocupação (pp)": (
+            kpis_atual["ocupacao"] - kpis_m1["ocupacao"]
+        ),
+        "Tarifa Média (%)": variacao_pct(
+            kpis_atual["tarifa_media"], kpis_m1["tarifa_media"]
+        )
+    })
 
-tabela_validacao["Atingimento (%)"] = tabela_validacao["atingimento"] * 100
+if kpis_yoy:
+    dados_comp.append({
+        "Comparação": "vs Mesmo Mês Ano Anterior",
+        "Receita (%)": variacao_pct(
+            kpis_atual["receita"], kpis_yoy["receita"]
+        ),
+        "Ocupação (pp)": (
+            kpis_atual["ocupacao"] - kpis_yoy["ocupacao"]
+        ),
+        "Tarifa Média (%)": variacao_pct(
+            kpis_atual["tarifa_media"], kpis_yoy["tarifa_media"]
+        )
+    })
 
-tabela_validacao = tabela_validacao.rename(
-    columns={
-        "unidade": "Unidade",
-        "receita_diarias": "Receita Diárias (R$)",
-        "receita_esperada": "Receita Esperada (R$)",
-        "nivel": "Nível"
-    }
-)
+df_comp = pd.DataFrame(dados_comp)
 
-st.dataframe(
-    tabela_validacao.style.format({
-        "Receita Diárias (R$)": "R$ {:,.2f}",
-        "Receita Esperada (R$)": "R$ {:,.2f}",
-        "Atingimento (%)": "{:.1f}%"
-    }),
-    use_container_width=True,
-    hide_index=True
-)
+if df_comp.empty:
+    st.info("Não há dados suficientes para comparativos temporais.")
+else:
+    st.dataframe(
+        df_comp.style.format({
+            "Receita (%)": "{:+.1f}%",
+            "Ocupação (pp)": "{:+.1f} pp",
+            "Tarifa Média (%)": "{:+.1f}%"
+        }),
+        use_container_width=True,
+        hide_index=True
+    )
