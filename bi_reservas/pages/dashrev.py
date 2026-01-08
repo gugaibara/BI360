@@ -247,8 +247,6 @@ if df_res_m.empty:
 # KPIs COMPARATIVOS
 # ======================
 
-st.markdown("### 📌 Resultados do Mês")
-
 
 def calcular_kpis_mes(df, periodo):
     df_m = df[df["mes_dt"] == periodo]
@@ -454,7 +452,7 @@ k1, k2, k3, k4 = st.columns(4)
 with k1:
     st.metric(
         "Receita Total",
-        formatar_valor_exec(receita_total)
+        receita_total
     )
 
 with k2:
@@ -466,7 +464,7 @@ with k2:
 with k3:
     st.metric(
         "Tarifa Média",
-        formatar_valor_exec(tarifa_media)
+        tarifa_media
     )
 
 with k4:
@@ -479,19 +477,19 @@ with k4:
 # ======================
 # LINHA 2 — KPIs FINANCEIROS
 # ======================
-k5, k6, k7 = st.columns(3)
+k5, k6, k7, k8 = st.columns(4)
 
 with k5:
     st.metric(
         "Cleaning Revenue",
-        formatar_valor_exec(kpis_hist_atual["cleaning"])
+        kpis_hist_atual["cleaning"]
         if kpis_hist_atual else "-"
     )
 
 with k6:
     st.metric(
         "Taxa Adm",
-        formatar_valor_exec(kpis_hist_atual["adm"])
+        kpis_hist_atual["adm"]
         if kpis_hist_atual else "-"
     )
 
@@ -501,6 +499,8 @@ with k7:
         formatar_pct(metricas_nivel_atual["atingimento_medio"] * 100)
         if metricas_nivel_atual["atingimento_medio"] is not None else "-"
     )
+with k8:
+    st.empty()
 
 # ======================
 # SHARE DE CANAL
@@ -533,7 +533,6 @@ else:
     )
 
     fig_share.update_traces(
-        textposition="inside",
         textinfo="label+percent",
         hovertemplate=(
             "Canal: %{label}<br>"
