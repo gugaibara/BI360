@@ -756,11 +756,6 @@ st.dataframe(
 # COMPARATIVOS TEMPORAIS
 # ======================
 
-st.divider()
-st.subheader("📈 Comparativos Temporais")
-st.caption(
-    "Análise mês contra mês (MoM) e ano contra ano (YoY), com valores absolutos e variações")
-
 cards = []
 
 # ======================

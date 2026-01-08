@@ -352,8 +352,6 @@ k5.metric("Receita Limpeza", f"R$ {receita_limpeza:,.2f}")
 # 7. GRÁFICO DINÂMICO
 # ======================
 
-st.divider()
-
 # Cabeçalho bonito quando unidade selecionada
 if unidade != "Todas":
     st.markdown(
