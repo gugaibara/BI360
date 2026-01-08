@@ -539,7 +539,7 @@ else:
     )
 
     fig_share.update_layout(
-        margin=dict(t=40, b=40, l=40, r=40),
+        margin=dict(t=80, b=80, l=80, r=80),
         legend=dict(
             orientation="h",
             yanchor="bottom",
