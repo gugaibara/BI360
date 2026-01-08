@@ -3,9 +3,26 @@ import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
 
+
+def formatar_valor_exec(valor):
+    if valor is None or pd.isna(valor):
+        return "-"
+    if valor >= 1_000_000:
+        return f"R$ {valor/1_000_000:.1f}M"
+    if valor >= 1_000:
+        return f"R$ {valor/1_000:.1f}k"
+    return f"R$ {valor:,.0f}"
+
+
+def formatar_pct(valor, casas=1):
+    if valor is None or pd.isna(valor):
+        return "-"
+    return f"{valor:.{casas}f}%"
+
 # ======================
 # CONFIGURAÇÃO DA PÁGINA
 # ======================
+
 
 st.set_page_config(
     page_title="Dash Revenue",
@@ -426,33 +443,64 @@ cleaning_revenue = df_hist_m["cleaning_revenue"].sum()
 taxa_adm = df_hist_m["adm_360"].sum()
 
 # ---- Layout KPIs ----
-k1, k2, k3, k4, k5, k6, k7 = st.columns(7)
 
-k1.metric("💰 Receita Total", f"R$ {receita_total:,.2f}")
-k2.metric("🏨 Ocupação", f"{ocupacao:.1f}%")
-k3.metric("📊 Tarifa Média", f"R$ {tarifa_media:,.2f}")
-k4.metric(
-    "🧹 Cleaning Revenue",
-    f"R$ {cleaning_revenue:,.2f}" if cleaning_revenue > 0 else "—"
-)
-k5.metric(
-    "🏷️ Taxa Adm",
-    f"R$ {taxa_adm:,.2f}" if taxa_adm > 0 else "—"
-)
-# 🎯 Atingimento Médio
-k6.metric(
-    "🎯 Atingimento Médio",
-    f"{metricas_nivel_atual['atingimento_medio']*100:.1f}%"
-    if metricas_nivel_atual["atingimento_medio"] is not None else "—"
-)
+st.subheader("📌 Resumo do Mês")
 
-# 🧭 Nível Médio
-k7.metric(
-    "🧭 Nível Médio",
-    f"{metricas_nivel_atual['nivel_medio']:.2f}"
-    if metricas_nivel_atual["nivel_medio"] is not None else "—"
-)
+# ======================
+# LINHA 1 — KPIs PRINCIPAIS
+# ======================
+k1, k2, k3, k4 = st.columns(4)
 
+with k1:
+    st.metric(
+        "Receita Total",
+        formatar_valor_exec(receita_total)
+    )
+
+with k2:
+    st.metric(
+        "Ocupação",
+        formatar_pct(ocupacao)
+    )
+
+with k3:
+    st.metric(
+        "Tarifa Média",
+        formatar_valor_exec(tarifa_media)
+    )
+
+with k4:
+    st.metric(
+        "Nível Médio",
+        f"{metricas_nivel_atual['nivel_medio']:.2f}"
+        if metricas_nivel_atual["nivel_medio"] is not None else "-"
+    )
+
+# ======================
+# LINHA 2 — KPIs FINANCEIROS
+# ======================
+k5, k6, k7 = st.columns(3)
+
+with k5:
+    st.metric(
+        "Cleaning Revenue",
+        formatar_valor_exec(kpis_hist_atual["cleaning"])
+        if kpis_hist_atual else "-"
+    )
+
+with k6:
+    st.metric(
+        "Taxa Adm",
+        formatar_valor_exec(kpis_hist_atual["adm"])
+        if kpis_hist_atual else "-"
+    )
+
+with k7:
+    st.metric(
+        "Atingimento Médio",
+        formatar_pct(metricas_nivel_atual["atingimento_medio"] * 100)
+        if metricas_nivel_atual["atingimento_medio"] is not None else "-"
+    )
 
 # ======================
 # SHARE DE CANAL
@@ -485,6 +533,7 @@ else:
     )
 
     fig_share.update_traces(
+        textposition="inside",
         textinfo="label+percent",
         hovertemplate=(
             "Canal: %{label}<br>"
@@ -494,8 +543,14 @@ else:
     )
 
     fig_share.update_layout(
-        showlegend=True,
-        margin=dict(t=60, b=20, l=20, r=20)
+        margin=dict(t=80, b=80, l=80, r=80),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.25,
+            xanchor="center",
+            x=0.5
+        )
     )
 
     st.plotly_chart(fig_share, use_container_width=True)
@@ -701,21 +756,22 @@ st.dataframe(
     hide_index=True
 )
 
-
 # ======================
 # COMPARATIVOS TEMPORAIS
 # ======================
 
 st.divider()
 st.subheader("📈 Comparativos Temporais")
+st.caption(
+    "Análise mês contra mês (MoM) e ano contra ano (YoY), com valores absolutos e variações")
 
 cards = []
 
 # ======================
-# VARIAÇÃO DO NÍVEL MÉDIO
+# VARIAÇÕES — NÍVEIS
 # ======================
 
-# Atingimento médio (pp)
+# MoM
 var_ating_medio_m1 = (
     (metricas_nivel_atual["atingimento_medio"] -
      metricas_nivel_m1["atingimento_medio"]) * 100
@@ -725,87 +781,13 @@ var_ating_medio_m1 = (
     ) else None
 )
 
-# Nível médio (diferença absoluta)
 var_nivel_medio_m1 = (
     metricas_nivel_atual["nivel_medio"] -
     metricas_nivel_m1["nivel_medio"]
     if metricas_nivel_m1["nivel_medio"] is not None else None
 )
 
-
-# ======================
-# MOM
-# ======================
-
-if kpis_m1:
-    cards.append({
-        "Comparação": "MoM",
-
-        # Receita
-        "Receita Atual": kpis_atual["receita"],
-        "Receita M-1": kpis_m1["receita"],
-        "Δ Receita": kpis_atual["receita"] - kpis_m1["receita"],
-        "Receita (%)": variacao_pct(
-            kpis_atual["receita"], kpis_m1["receita"]
-        ),
-
-        # Ocupação
-        "Ocupação Atual": kpis_atual["ocupacao"],
-        "Ocupação M-1": kpis_m1["ocupacao"],
-        "Δ Ocupação (pp)": (
-            kpis_atual["ocupacao"] - kpis_m1["ocupacao"]
-        ),
-
-        # Tarifa
-        "Tarifa Atual": kpis_atual["tarifa_media"],
-        "Tarifa M-1": kpis_m1["tarifa_media"],
-        "Δ Tarifa": kpis_atual["tarifa_media"] - kpis_m1["tarifa_media"],
-
-        # Cleaning
-        "Cleaning Atual": cleaning_atual,
-        "Cleaning M-1": cleaning_m1,
-        "Δ Cleaning": (
-            cleaning_atual - cleaning_m1
-            if cleaning_atual is not None and cleaning_m1 is not None
-            else None
-        ),
-
-        # Adm
-        "Adm Atual": adm_atual,
-        "Adm M-1": adm_m1,
-        "Δ Adm": (
-            adm_atual - adm_m1
-            if adm_atual is not None and adm_m1 is not None
-            else None
-        ),
-
-        # Níveis
-        "Atingimento Médio Atual (%)": (
-            metricas_nivel_atual["atingimento_medio"] * 100
-            if metricas_nivel_atual["atingimento_medio"] else None
-        ),
-        "Atingimento Médio M-1 (%)": (
-            metricas_nivel_m1["atingimento_medio"] * 100
-            if metricas_nivel_m1["atingimento_medio"] else None
-        ),
-        "Δ Atingimento Médio (pp)": (
-            (metricas_nivel_atual["atingimento_medio"] -
-             metricas_nivel_m1["atingimento_medio"]) * 100
-            if metricas_nivel_m1["atingimento_medio"] else None
-        ),
-
-        "Nível Médio Atual": metricas_nivel_atual["nivel_medio"],
-        "Nível Médio M-1": metricas_nivel_m1["nivel_medio"],
-        "Δ Nível Médio": (
-            metricas_nivel_atual["nivel_medio"] -
-            metricas_nivel_m1["nivel_medio"]
-        )
-    })
-
-# ======================
-# YOY
-# ======================
-
+# YoY
 var_ating_medio_yoy = (
     (metricas_nivel_atual["atingimento_medio"] -
      metricas_nivel_yoy["atingimento_medio"]) * 100
@@ -824,15 +806,65 @@ var_nivel_medio_yoy = (
     ) else None
 )
 
+# ======================
+# MOM — DETALHADO
+# ======================
+
+if kpis_m1:
+    cards.append({
+        "Comparação": "MoM",
+
+        "Receita Atual": kpis_atual["receita"],
+        "Receita M-1": kpis_m1["receita"],
+        "Δ Receita": kpis_atual["receita"] - kpis_m1["receita"],
+
+        "Ocupação Atual": kpis_atual["ocupacao"],
+        "Ocupação M-1": kpis_m1["ocupacao"],
+        "Δ Ocupação (pp)": kpis_atual["ocupacao"] - kpis_m1["ocupacao"],
+
+        "Tarifa Atual": kpis_atual["tarifa_media"],
+        "Tarifa M-1": kpis_m1["tarifa_media"],
+        "Δ Tarifa": kpis_atual["tarifa_media"] - kpis_m1["tarifa_media"],
+
+        "Cleaning Atual": cleaning_atual,
+        "Cleaning M-1": cleaning_m1,
+        "Δ Cleaning": (
+            cleaning_atual - cleaning_m1
+            if cleaning_atual is not None and cleaning_m1 is not None else None
+        ),
+
+        "Adm Atual": adm_atual,
+        "Adm M-1": adm_m1,
+        "Δ Adm": (
+            adm_atual - adm_m1
+            if adm_atual is not None and adm_m1 is not None else None
+        ),
+
+        "Atingimento Médio Atual (%)": (
+            metricas_nivel_atual["atingimento_medio"] * 100
+            if metricas_nivel_atual["atingimento_medio"] is not None else None
+        ),
+        "Atingimento Médio M-1 (%)": (
+            metricas_nivel_m1["atingimento_medio"] * 100
+            if metricas_nivel_m1["atingimento_medio"] is not None else None
+        ),
+        "Δ Atingimento Médio (pp)": var_ating_medio_m1,
+
+        "Nível Médio Atual": metricas_nivel_atual["nivel_medio"],
+        "Nível Médio M-1": metricas_nivel_m1["nivel_medio"],
+        "Δ Nível Médio": var_nivel_medio_m1
+    })
+
+# ======================
+# YOY — SINTÉTICO (PADRONIZADO)
+# ======================
+
 if kpis_yoy:
     cards.append({
         "Comparação": "YoY",
-        "Receita (%)": variacao_pct(
-            kpis_atual["receita"], kpis_yoy["receita"]
-        ),
-        "Ocupação (pp)": (
-            kpis_atual["ocupacao"] - kpis_yoy["ocupacao"]
-        ),
+
+        "Receita (%)": variacao_pct(kpis_atual["receita"], kpis_yoy["receita"]),
+        "Ocupação (pp)": kpis_atual["ocupacao"] - kpis_yoy["ocupacao"],
         "Tarifa Média (%)": variacao_pct(
             kpis_atual["tarifa_media"], kpis_yoy["tarifa_media"]
         ),
@@ -852,11 +884,19 @@ if kpis_yoy:
         "Nível Médio (Δ)": var_nivel_medio_yoy
     })
 
+df_comp = pd.DataFrame(cards)
+
 # ======================
-# DATAFRAME 3Meses
+# HISTÓRICO — ÚLTIMOS 3 MESES
 # ======================
 
-df_comp = pd.DataFrame(cards)
+st.divider()
+st.subheader("📊 Evolução Recente (Últimos 3 Meses)")
+st.caption("Valores absolutos por mês e variação em relação ao mês anterior")
+
+# ======================
+# BASE — HISTÓRICO ÚLTIMOS 3 MESES
+# ======================
 
 periodos_3m = [
     periodo - 2,
@@ -866,197 +906,183 @@ periodos_3m = [
 
 labels_3m = [p.strftime("%b/%y") for p in periodos_3m]
 
-# Receita
+# -------- Receita --------
 receita_3m = [
-    df_res_comp[df_res_comp["mes_dt"] == p]["valor_mes"].sum()
+    df_res_comp.loc[df_res_comp["mes_dt"] == p, "valor_mes"].sum()
     for p in periodos_3m
 ]
 
-# Ocupação
+# -------- Ocupação --------
 ocupacao_3m = []
 for p in periodos_3m:
     k = calcular_kpis_mes(df_res_comp, p)
-    ocupacao_3m.append(k["ocupacao"] if k else 0)
+    ocupacao_3m.append(k["ocupacao"] if k and k["ocupacao"] is not None else 0)
 
-# Tarifa Média
+# -------- Tarifa Média --------
 tarifa_3m = []
 for p in periodos_3m:
     k = calcular_kpis_mes(df_res_comp, p)
-    tarifa_3m.append(k["tarifa_media"] if k else 0)
+    tarifa_3m.append(k["tarifa_media"]
+                     if k and k["tarifa_media"] is not None else 0)
 
-# Cleaning
-cleaning_3m = [
-    calcular_kpis_hist_mes(df_hist_comp, p)["cleaning"] or 0
-    for p in periodos_3m
-]
+# -------- Cleaning Revenue --------
+cleaning_3m = []
+for p in periodos_3m:
+    k = calcular_kpis_hist_mes(df_hist_comp, p)
+    cleaning_3m.append(k["cleaning"] if k and k["cleaning"] is not None else 0)
 
-# Adm
-adm_3m = [
-    calcular_kpis_hist_mes(df_hist_comp, p)["adm"] or 0
-    for p in periodos_3m
-]
+# -------- Taxa Adm --------
+adm_3m = []
+for p in periodos_3m:
+    k = calcular_kpis_hist_mes(df_hist_comp, p)
+    adm_3m.append(k["adm"] if k and k["adm"] is not None else 0)
 
-# Atingimento Médio
-ating_3m = [
-    (calcular_metricas_nivel(df_res_comp, df_meta,
-     p, partner_sel)["atingimento_medio"] or 0) * 100
-    for p in periodos_3m
-]
+# -------- Atingimento Médio --------
+ating_3m = []
+for p in periodos_3m:
+    m = calcular_metricas_nivel(df_res_comp, df_meta, p, partner_sel)
+    ating_3m.append(
+        m["atingimento_medio"] * 100
+        if m and m["atingimento_medio"] is not None
+        else 0
+    )
 
-# Nível Médio
-nivel_3m = [
-    calcular_metricas_nivel(df_res_comp, df_meta, p, partner_sel)[
-        "nivel_medio"] or 0
-    for p in periodos_3m
-]
+# -------- Nível Médio --------
+nivel_3m = []
+for p in periodos_3m:
+    m = calcular_metricas_nivel(df_res_comp, df_meta, p, partner_sel)
+    nivel_3m.append(
+        m["nivel_medio"]
+        if m and m["nivel_medio"] is not None
+        else 0
+    )
 
 
-def grafico_historico_3m(
-    titulo,
-    valores,
-    labels,
-    nome_barra,
-    unidade="",
-    cor_barra="#2563eb"
-):
-    # diferença do último mês
+def grafico_historico_3m(titulo, valores, labels, nome_barra, unidade="", cor="#2563eb"):
     delta = valores[-1] - valores[-2] if len(valores) >= 2 else None
 
     fig = go.Figure()
-
     fig.add_bar(
         x=labels,
         y=valores,
-        name=nome_barra,
-        marker_color=cor_barra,
+        marker_color=cor,
         text=[f"{v:,.2f}{unidade}" for v in valores],
         textposition="outside"
     )
 
     fig.update_layout(
         title=f"{titulo}<br><sup>Δ último mês: {delta:+,.2f}{unidade if delta is not None else ''}</sup>",
-        yaxis=dict(title=nome_barra),
-        legend_title="",
+        yaxis_title=nome_barra,
         margin=dict(t=80, b=40)
     )
 
     st.plotly_chart(fig, use_container_width=True)
 
+# -------- GRID --------
 
-st.subheader("📊 Histórico — Receita (Últimos 3 Meses)")
-grafico_historico_3m(
-    "Receita — Últimos 3 Meses",
-    receita_3m,
-    labels_3m,
-    "Receita (R$)"
-)
 
-st.subheader("🏨 Histórico — Ocupação")
-grafico_historico_3m(
-    "Ocupação — Últimos 3 Meses",
-    ocupacao_3m,
-    labels_3m,
-    "Ocupação (%)"
-)
-
-st.subheader("📊 Histórico — Tarifa Média")
-grafico_historico_3m(
-    "Tarifa Média — Últimos 3 Meses",
-    tarifa_3m,
-    labels_3m,
-    "Tarifa Média (R$)"
-)
-
-st.subheader("🧹 Histórico — Cleaning Revenue")
-grafico_historico_3m(
-    "Cleaning Revenue — Últimos 3 Meses",
-    cleaning_3m,
-    labels_3m,
-    "Cleaning Revenue (R$)"
-)
-
-st.subheader("🏷️ Histórico — Taxa Adm")
-grafico_historico_3m(
-    "Taxa Adm — Últimos 3 Meses",
-    adm_3m,
-    labels_3m,
-    "Taxa Adm (R$)"
-)
-
-st.subheader("🎯 Histórico — Atingimento Médio")
-grafico_historico_3m(
-    "Atingimento Médio — Últimos 3 Meses",
-    ating_3m,
-    labels_3m,
-    "Atingimento Médio (%)",
-)
-
-st.subheader("🧭 Histórico — Nível Médio")
-grafico_historico_3m(
-    "Nível Médio — Últimos 3 Meses",
-    nivel_3m,
-    labels_3m,
-    "Nível Médio",
-)
-
-# ======================
-# TABELA FINAL
-# ======================
-
-if df_comp.empty:
-    st.info("Não há dados suficientes para comparativos temporais.")
-else:
-    df_comp_safe = df_comp.copy()
-
-    colunas_formatadas = [
-        "Receita (%)",
-        "Ocupação (pp)",
-        "Tarifa Média (%)",
-        "Cleaning Revenue (%)",
-        "Taxa Adm (%)",
-        "Atingimento Médio (pp)",
-        "Nível Médio (Δ)"
-    ]
-
-    colunas_existentes = [
-        c for c in colunas_formatadas
-        if c in df_comp_safe.columns
-    ]
-
-    df_comp_safe[colunas_existentes] = df_comp_safe[colunas_existentes].astype(
-        float)
-
-    st.markdown("#### 📋 Tabela de Comparativos Temporais")
-    st.dataframe(
-        df_comp_safe.style.format({
-            # Receita
-            "Receita Atual": "R$ {:,.0f}",
-            "Receita M-1": "R$ {:,.0f}",
-            "Δ Receita": "{:+,.0f}",
-
-            # Ocupação
-            "Ocupação Atual": "{:.1f}%",
-            "Ocupação M-1": "{:.1f}%",
-
-            # Tarifa
-            "Tarifa Atual": "R$ {:,.2f}",
-            "Tarifa M-1": "R$ {:,.2f}",
-
-            # Cleaning
-            "Cleaning Atual": "R$ {:,.0f}",
-            "Cleaning M-1": "R$ {:,.0f}",
-
-            # Adm
-            "Adm Atual": "R$ {:,.0f}",
-            "Adm M-1": "R$ {:,.0f}",
-
-            # Níveis
-            "Atingimento Médio Atual (%)": "{:.1f}%",
-            "Atingimento Médio M-1 (%)": "{:.1f}%",
-
-            "Nível Médio Atual": "{:.2f}",
-            "Nível Médio M-1": "{:.2f}",
-        }),
-        use_container_width=True,
-        hide_index=True
+c1, c2, c3 = st.columns(3)
+with c1:
+    grafico_historico_3m(
+        titulo="Receita",
+        valores=receita_3m,
+        labels=labels_3m,
+        nome_barra="Receita (R$)"
     )
+
+with c2:
+    grafico_historico_3m(
+        titulo="Ocupação",
+        valores=ocupacao_3m,
+        labels=labels_3m,
+        nome_barra="Ocupação (%)",
+        unidade="%",
+        cor="#f97316"
+    )
+
+with c3:
+    grafico_historico_3m(
+        titulo="Tarifa Média",
+        valores=tarifa_3m,
+        labels=labels_3m,
+        nome_barra="Tarifa Média (R$)"
+    )
+
+
+c4, c5 = st.columns(2)
+with c4:
+    grafico_historico_3m(
+        titulo="Cleaning Revenue",
+        valores=cleaning_3m,
+        labels=labels_3m,
+        nome_barra="Cleaning (R$)",
+        cor="#dc2626"
+    )
+
+with c5:
+    grafico_historico_3m(
+        titulo="Taxa Adm",
+        valores=adm_3m,
+        labels=labels_3m,
+        nome_barra="Taxa Adm (R$)",
+        cor="#dc2626"
+    )
+
+
+c6, c7 = st.columns(2)
+with c6:
+    grafico_historico_3m(
+        titulo="Atingimento Médio",
+        valores=ating_3m,
+        labels=labels_3m,
+        nome_barra="Atingimento (%)",
+        unidade="%",
+        cor="#7c3aed"
+    )
+
+with c7:
+    grafico_historico_3m(
+        titulo="Nível Médio",
+        valores=nivel_3m,
+        labels=labels_3m,
+        nome_barra="Nível Médio",
+        cor="#7c3aed"
+    )
+
+# ======================
+# TABELA FINAL (SOB DEMANDA)
+# ======================
+
+st.divider()
+
+with st.expander("📋 Ver tabela completa de comparativos temporais"):
+    if df_comp.empty:
+        st.info("Não há dados suficientes para comparativos temporais.")
+    else:
+        st.dataframe(
+            df_comp.style.format({
+                "Receita Atual": "R$ {:,.0f}",
+                "Receita M-1": "R$ {:,.0f}",
+                "Δ Receita": "{:+,.0f}",
+
+                "Ocupação Atual": "{:.1f}%",
+                "Ocupação M-1": "{:.1f}%",
+
+                "Tarifa Atual": "R$ {:,.2f}",
+                "Tarifa M-1": "R$ {:,.2f}",
+
+                "Cleaning Atual": "R$ {:,.0f}",
+                "Cleaning M-1": "R$ {:,.0f}",
+
+                "Adm Atual": "R$ {:,.0f}",
+                "Adm M-1": "R$ {:,.0f}",
+
+                "Atingimento Médio Atual (%)": "{:.1f}%",
+                "Atingimento Médio M-1 (%)": "{:.1f}%",
+
+                "Nível Médio Atual": "{:.2f}",
+                "Nível Médio M-1": "{:.2f}",
+            }),
+            use_container_width=True,
+            hide_index=True
+        )
