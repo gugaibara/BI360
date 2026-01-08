@@ -7,11 +7,7 @@ import plotly.graph_objects as go
 def formatar_valor_exec(valor):
     if valor is None or pd.isna(valor):
         return "-"
-    if valor >= 1_000_000:
-        return f"R$ {valor/1_000_000:.1f}M"
-    if valor >= 1_000:
-        return f"R$ {valor/1_000:.1f}k"
-    return f"R$ {valor:,.0f}"
+    return f"R$ {valor:,.2f}"
 
 
 def formatar_pct(valor, casas=1):
@@ -452,7 +448,7 @@ k1, k2, k3, k4 = st.columns(4)
 with k1:
     st.metric(
         "Receita Total",
-        receita_total
+        formatar_valor_exec(receita_total)
     )
 
 with k2:
@@ -464,7 +460,7 @@ with k2:
 with k3:
     st.metric(
         "Tarifa Média",
-        tarifa_media
+        formatar_valor_exec(tarifa_media)
     )
 
 with k4:
@@ -482,25 +478,26 @@ k5, k6, k7, k8 = st.columns(4)
 with k5:
     st.metric(
         "Cleaning Revenue",
-        kpis_hist_atual["cleaning"]
+        formatar_valor_exec(kpis_hist_atual["cleaning"])
         if kpis_hist_atual else "-"
     )
 
 with k6:
     st.metric(
         "Taxa Adm",
-        kpis_hist_atual["adm"]
+        formatar_valor_exec(kpis_hist_atual["adm"])
         if kpis_hist_atual else "-"
     )
 
 with k7:
+    st.empty()
+
+with k8:
     st.metric(
         "Atingimento Médio",
         formatar_pct(metricas_nivel_atual["atingimento_medio"] * 100)
         if metricas_nivel_atual["atingimento_medio"] is not None else "-"
     )
-with k8:
-    st.empty()
 
 # ======================
 # SHARE DE CANAL
