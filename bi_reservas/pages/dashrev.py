@@ -490,7 +490,11 @@ with k6:
     )
 
 with k7:
-    st.empty()
+    "Unidades Analisadas",
+    st.metric(
+        "",
+        f"{df_res_m[['propriedade', 'unidade']].drop_duplicates().shape[0]}"
+    )
 
 with k8:
     st.metric(
