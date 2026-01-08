@@ -1027,36 +1027,29 @@ else:
             "Receita Atual": "R$ {:,.0f}",
             "Receita M-1": "R$ {:,.0f}",
             "Δ Receita": "{:+,.0f}",
-            "Receita (%)": "{:+.1f}%",
 
             # Ocupação
             "Ocupação Atual": "{:.1f}%",
             "Ocupação M-1": "{:.1f}%",
-            "Δ Ocupação (pp)": "{:+.1f} pp",
 
             # Tarifa
             "Tarifa Atual": "R$ {:,.2f}",
             "Tarifa M-1": "R$ {:,.2f}",
-            "Δ Tarifa": "{:+,.2f}",
 
             # Cleaning
             "Cleaning Atual": "R$ {:,.0f}",
             "Cleaning M-1": "R$ {:,.0f}",
-            "Δ Cleaning": "{:+,.0f}",
 
             # Adm
             "Adm Atual": "R$ {:,.0f}",
             "Adm M-1": "R$ {:,.0f}",
-            "Δ Adm": "{:+,.0f}",
 
             # Níveis
             "Atingimento Médio Atual (%)": "{:.1f}%",
             "Atingimento Médio M-1 (%)": "{:.1f}%",
-            "Δ Atingimento Médio (pp)": "{:+.1f} pp",
 
             "Nível Médio Atual": "{:.2f}",
             "Nível Médio M-1": "{:.2f}",
-            "Δ Nível Médio": "{:+.2f}"
         }),
         use_container_width=True,
         hide_index=True
