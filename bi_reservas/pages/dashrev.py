@@ -73,7 +73,13 @@ def load_data():
 
     # ---- Aba Histórico Unidades ----
     ws_hist = sh.worksheet("Histórico Unidades")
-    df_hist = pd.DataFrame(ws_hist.get_all_records())
+    values_hist = ws_hist.get_all_values()
+
+    df_hist = pd.DataFrame(
+        values_hist[1:],
+        columns=values_hist[0]
+    )
+
     df_hist.columns = df_hist.columns.str.strip().str.lower()
 
     # ---- Aba Base Níveis ----
