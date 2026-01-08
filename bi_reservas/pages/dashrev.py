@@ -542,7 +542,7 @@ else:
         margin=dict(t=40, b=40, l=40, r=40),
         legend=dict(
             orientation="h",
-            yanchor="right",
+            yanchor="bottom",
             y=-0.25,
             xanchor="center",
             x=0.5
