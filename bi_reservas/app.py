@@ -253,7 +253,7 @@ st.markdown(
 st.markdown(
     """
     <div class="header-container">
-        <div class="header-title">📊 BI de Reservas</div>
+        <div class="header-title">📊 Dashboard de Reservas 360 Suítes</div>
         <div class="header-subtitle">
             Visão consolidada de performance operacional
         </div>
@@ -503,7 +503,7 @@ if propriedade != "Todos" and unidade != "Todas":
                 hist["nivel"] = hist["atingimento"].apply(classificar_nivel)
 
                 st.divider()
-                st.subheader("🎯 Histórico de Níveis (Meta vs Real)")
+                st.subheader("🎯 Histórico de Níveis")
 
                 fig_nivel = px.bar(
                     hist,
@@ -531,10 +531,9 @@ if propriedade != "Todos":
         value=False
     )
 
-    st.divider()
-    st.subheader(f"🏢 Histórico Mensal — {propriedade}")
-
     if ver_hist_predio:
+        st.divider()
+        st.subheader(f"🏢 Histórico Mensal — {propriedade}")
         hist_p = (
             df[df["propriedade"] == propriedade]
             .groupby(["mes", "mes_dt"], as_index=False)
