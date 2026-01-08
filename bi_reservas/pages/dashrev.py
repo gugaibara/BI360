@@ -523,7 +523,7 @@ else:
         canal_share,
         names="canal",
         values="valor_mes",
-        hole=0.45,
+        hole=0.25,
         title="Distribuição de Receita por Canal",
         color="canal",
         color_discrete_map=CORES_CANAIS
@@ -539,10 +539,10 @@ else:
     )
 
     fig_share.update_layout(
-        margin=dict(t=80, b=80, l=80, r=80),
+        margin=dict(t=40, b=40, l=40, r=40),
         legend=dict(
             orientation="h",
-            yanchor="bottom",
+            yanchor="right",
             y=-0.25,
             xanchor="center",
             x=0.5
