@@ -690,7 +690,6 @@ st.markdown("---")
 # SHARE DE CANAL
 # ======================
 
-st.divider()
 st.subheader("📊 Share de Canal")
 
 canal_share = (
