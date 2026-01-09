@@ -225,7 +225,7 @@ meses = (
 # ======================
 
 with st.sidebar:
-    st.header("🎛️ Filtros")
+    st.header("🔎 Filtros")
 
     mes_sel = st.selectbox(
         "📅 Mês de análise",
@@ -265,11 +265,13 @@ if df_res_m.empty:
 # CONTEXTO DOS FILTROS
 # ======================
 
+st.markdown("### 🔎 Filtros Aplicados")
+
 c1, c2, c3 = st.columns(3)
 
 with c1:
     st.metric(
-        label="📅 Mês de Análise",
+        label="📅 Mês",
         value=mes_sel
     )
 
@@ -282,8 +284,10 @@ with c2:
 with c3:
     st.metric(
         label="🏘️ Unidades Ativas",
-        value=f"{df_res_m[['propriedade', 'unidade']].drop_duplicates().shape[0]}"
+        value=df_res_m[["propriedade", "unidade"]].drop_duplicates().shape[0]
     )
+
+st.divider()
 
 # ======================
 # KPIs COMPARATIVOS
