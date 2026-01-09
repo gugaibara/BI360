@@ -622,8 +622,21 @@ nivel_base = plclcadm_unidade.merge(
     how="left"
 )
 
+# garante numérico antes de qualquer cálculo
+nivel_base["realizado_plclcadm"] = pd.to_numeric(
+    nivel_base["realizado_plclcadm"], errors="coerce"
+)
+
+nivel_base["receita_esperada"] = pd.to_numeric(
+    nivel_base["receita_esperada"], errors="coerce"
+)
+
 nivel_base["atingimento"] = None
-mask_meta = nivel_base["receita_esperada"] > 0
+
+mask_meta = (
+    nivel_base["receita_esperada"].notna() &
+    (nivel_base["receita_esperada"] > 0)
+)
 
 nivel_base.loc[mask_meta, "atingimento"] = (
     nivel_base.loc[mask_meta, "realizado_plclcadm"] /
