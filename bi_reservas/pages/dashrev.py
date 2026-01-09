@@ -262,32 +262,64 @@ if df_res_m.empty:
     st.stop()
 
 # ======================
-# CONTEXTO DOS FILTROS
+# FILTROS APLICADOS (UX)
 # ======================
 
 st.markdown("### 🔎 Filtros Aplicados")
 
-c1, c2, c3 = st.columns(3)
+f1, f2, f3 = st.columns(3)
 
-with c1:
-    st.metric(
-        label="📅 Mês",
-        value=mes_sel
+with f1:
+    st.markdown(
+        f"""
+        <div style="
+            background: #0f172a;
+            padding: 16px;
+            border-radius: 12px;
+        ">
+            <div style="font-size: 12px; color: #94a3b8;">Mês</div>
+            <div style="font-size: 20px; font-weight: 600;">{mes_sel}</div>
+        </div>
+        """,
+        unsafe_allow_html=True
     )
 
-with c2:
-    st.metric(
-        label="🤝 Partner",
-        value=partner_sel
+with f2:
+    st.markdown(
+        f"""
+        <div style="
+            background: #0f172a;
+            padding: 16px;
+            border-radius: 12px;
+        ">
+            <div style="font-size: 12px; color: #94a3b8;">Partner</div>
+            <div style="font-size: 20px; font-weight: 600;">{partner_sel}</div>
+        </div>
+        """,
+        unsafe_allow_html=True
     )
 
-with c3:
-    st.metric(
-        label="🏘️ Unidades Ativas",
-        value=df_res_m[["propriedade", "unidade"]].drop_duplicates().shape[0]
+with f3:
+    unidades_ativas = (
+        df_res_m[["propriedade", "unidade"]]
+        .drop_duplicates()
+        .shape[0]
     )
 
-st.divider()
+    st.markdown(
+        f"""
+        <div style="
+            background: #0f172a;
+            padding: 16px;
+            border-radius: 12px;
+        ">
+            <div style="font-size: 12px; color: #94a3b8;">Unidades Ativas</div>
+            <div style="font-size: 20px; font-weight: 600;">{unidades_ativas}</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
 
 # ======================
 # KPIs COMPARATIVOS
@@ -530,13 +562,17 @@ def variacao_pct(atual, anterior):
 cleaning_revenue = df_hist_m["cleaning_revenue"].sum()
 taxa_adm = df_hist_m["adm_360"].sum()
 
-# ---- Layout KPIs ----
-st.divider()
-st.subheader("📊 Resumo Executivo do Mês")
+# ======================
+# RESUMO EXECUTIVO DO MÊS
+# ======================
+
+st.markdown("## 📊 Resumo Executivo do Mês")
 st.caption(
     "Principais indicadores financeiros, operacionais e de performance "
     "para o período selecionado."
 )
+
+st.markdown("---")
 
 # ======================
 # LINHA 1 — KPIs PRINCIPAIS
@@ -545,59 +581,75 @@ k1, k2, k3, k4 = st.columns(4)
 
 with k1:
     st.metric(
-        "Receita Total",
-        formatar_valor_exec(receita_total)
+        label="Receita Total",
+        value=formatar_valor_exec(receita_total)
     )
 
 with k2:
     st.metric(
-        "Ocupação",
-        formatar_pct(ocupacao)
+        label="Ocupação",
+        value=formatar_pct(ocupacao)
     )
 
 with k3:
     st.metric(
-        "Tarifa Média",
-        formatar_valor_exec(tarifa_media)
+        label="Tarifa Média",
+        value=formatar_valor_exec(tarifa_media)
     )
 
 with k4:
     st.metric(
-        "Nível Médio",
-        f"{metricas_nivel_atual['nivel_medio']:.2f}"
-        if metricas_nivel_atual["nivel_medio"] is not None else "-"
+        label="Nível Médio",
+        value=(
+            f"{metricas_nivel_atual['nivel_medio']:.2f}"
+            if metricas_nivel_atual["nivel_medio"] is not None
+            else "-"
+        )
     )
 
+st.markdown("")
+
 # ======================
-# LINHA 2 — KPIs FINANCEIROS
+# LINHA 2 — KPIs DE APOIO
 # ======================
 k5, k6, k7, k8 = st.columns(4)
 
 with k5:
     st.metric(
-        "Cleaning Revenue",
-        formatar_valor_exec(kpis_hist_atual["cleaning"])
-        if kpis_hist_atual else "-"
+        label="Cleaning Revenue",
+        value=(
+            formatar_valor_exec(kpis_hist_atual["cleaning"])
+            if kpis_hist_atual and kpis_hist_atual.get("cleaning") is not None
+            else "-"
+        )
     )
 
 with k6:
     st.metric(
-        "Taxa Adm",
-        formatar_valor_exec(kpis_hist_atual["adm"])
-        if kpis_hist_atual else "-"
+        label="Taxa Adm",
+        value=(
+            formatar_valor_exec(kpis_hist_atual["adm"])
+            if kpis_hist_atual and kpis_hist_atual.get("adm") is not None
+            else "-"
+        )
     )
 
 with k7:
     st.metric(
-        "Unidades Analisadas",
-        f"{df_res_m[['propriedade', 'unidade']].drop_duplicates().shape[0]}"
+        label="Unidades Analisadas",
+        value=df_res_m[["propriedade", "unidade"]]
+        .drop_duplicates()
+        .shape[0]
     )
 
 with k8:
     st.metric(
-        "Atingimento Médio",
-        formatar_pct(metricas_nivel_atual["atingimento_medio"] * 100)
-        if metricas_nivel_atual["atingimento_medio"] is not None else "-"
+        label="Atingimento Médio",
+        value=(
+            formatar_pct(metricas_nivel_atual["atingimento_medio"] * 100)
+            if metricas_nivel_atual["atingimento_medio"] is not None
+            else "-"
+        )
     )
 
 # ======================
