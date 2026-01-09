@@ -564,6 +564,7 @@ taxa_adm = df_hist_m["adm_360"].sum()
 # KPIs — CARDS VISUAIS
 # ======================
 
+st.markdown("---")
 st.markdown("### 📊 Indicadores do Mês")
 
 
