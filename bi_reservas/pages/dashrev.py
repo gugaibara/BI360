@@ -26,22 +26,41 @@ st.set_page_config(
 )
 
 # ======================
-# HEADER EXECUTIVO
+# HEADER PADRÃO — DASH REVENUE
 # ======================
 
 st.markdown(
-    f"""
-    <div style="
+    """
+    <style>
+    .header-container {
         background: linear-gradient(90deg, #2563eb, #1e40af);
-        padding: 24px 28px;
-        border-radius: 16px;
+        padding: 26px 30px;
+        border-radius: 18px;
+        margin-bottom: 26px;
+    }
+    .header-title {
+        font-size: 34px;
+        font-weight: 700;
         color: white;
-        margin-bottom: 20px;
-    ">
-        <h1 style="margin: 0; font-size: 34px;">📈 Dash Revenue</h1>
-        <p style="margin: 6px 0 0 0; font-size: 16px; opacity: 0.9;">
+        margin: 0;
+    }
+    .header-subtitle {
+        font-size: 15px;
+        color: rgba(255,255,255,0.85);
+        margin-top: 6px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    """
+    <div class="header-container">
+        <div class="header-title">📈 Dash Revenue</div>
+        <div class="header-subtitle">
             Resultados financeiros e operacionais — visão executiva
-        </p>
+        </div>
     </div>
     """,
     unsafe_allow_html=True
@@ -277,8 +296,8 @@ with f1:
             padding: 16px;
             border-radius: 12px;
         ">
-            <div style="font-size: 12px; color: #94a3b8;">Mês</div>
-            <div style="font-size: 20px; font-weight: 600;">{mes_sel}</div>
+            <div style="font-size: 12px; color: #94a3b8;">Partner</div>
+            <div style="font-size: 20px; font-weight: 600;">{partner_sel}</div>
         </div>
         """,
         unsafe_allow_html=True
@@ -292,12 +311,13 @@ with f2:
             padding: 16px;
             border-radius: 12px;
         ">
-            <div style="font-size: 12px; color: #94a3b8;">Partner</div>
-            <div style="font-size: 20px; font-weight: 600;">{partner_sel}</div>
+            <div style="font-size: 12px; color: #94a3b8;">Mês</div>
+            <div style="font-size: 20px; font-weight: 600;">{mes_sel}</div>
         </div>
         """,
         unsafe_allow_html=True
     )
+
 
 with f3:
     unidades_ativas = (
