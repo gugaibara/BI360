@@ -574,39 +574,39 @@ if total_receita > 0:
 # DISTRIBUIÇÃO DE NÍVEIS
 # ======================
 
-# receita de diárias por unidade no mês
-diarias_unidade = (
-    df_res_m
+# ======================
+# BASE DE NÍVEIS — ATINGIMENTO POR PLCLCADM
+# ======================
+
+# soma do PLCLCADM por unidade no mês (Histórico Unidades)
+plclcadm_unidade = (
+    df_hist_m
     .groupby(["propriedade", "unidade"], as_index=False)
     .agg({
-        "valor_mes": "sum",
-        "limpeza_mes": "sum"
+        "plclcadm": "sum"
     })
+    .rename(columns={"plclcadm": "realizado_plclcadm"})
 )
 
-diarias_unidade["receita_diarias"] = (
-    diarias_unidade["valor_mes"] -
-    diarias_unidade["limpeza_mes"]
-)
-
-nivel_base = diarias_unidade.merge(
+# junta com base de metas
+nivel_base = plclcadm_unidade.merge(
     df_meta,
     on=["propriedade", "unidade"],
     how="left"
 )
 
+# calcula atingimento apenas quando existe meta válida
 nivel_base["atingimento"] = None
 
-mask = nivel_base["receita_esperada"] > 0
+mask_meta = nivel_base["receita_esperada"] > 0
 
-nivel_base.loc[mask, "atingimento"] = (
-    nivel_base.loc[mask, "receita_diarias"] /
-    nivel_base.loc[mask, "receita_esperada"]
+nivel_base.loc[mask_meta, "atingimento"] = (
+    nivel_base.loc[mask_meta, "realizado_plclcadm"] /
+    nivel_base.loc[mask_meta, "receita_esperada"]
 )
 
+# classificação de nível
 nivel_base["nivel"] = "Sem Meta"
-
-mask_meta = nivel_base["receita_esperada"] > 0
 
 nivel_base.loc[mask_meta, "nivel"] = (
     nivel_base.loc[mask_meta, "atingimento"]
