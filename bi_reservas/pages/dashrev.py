@@ -881,16 +881,7 @@ st.divider()
 st.subheader("📊 Evolução Recente (Últimos 3 Meses)")
 st.caption("Valores absolutos por mês e variação em relação ao mês anterior")
 
-# ======================
-# BASE — HISTÓRICO ÚLTIMOS 3 MESES
-# ======================
-
-periodos_3m = [
-    periodo - 2,
-    periodo - 1,
-    periodo
-]
-
+periodos_3m = [periodo - 2, periodo - 1, periodo]
 labels_3m = [p.strftime("%b/%y") for p in periodos_3m]
 
 # -------- Receita --------
@@ -901,65 +892,72 @@ receita_3m = [
 
 # -------- Ocupação --------
 ocupacao_3m = []
-for p in periodos_3m:
-    k = calcular_kpis_mes(df_res_comp, p)
-    ocupacao_3m.append(k["ocupacao"] if k and k["ocupacao"] is not None else 0)
-
-# -------- Tarifa Média --------
 tarifa_3m = []
+
 for p in periodos_3m:
     k = calcular_kpis_mes(df_res_comp, p)
-    tarifa_3m.append(k["tarifa_media"]
-                     if k and k["tarifa_media"] is not None else 0)
+    ocupacao_3m.append(k["ocupacao"] if k else 0)
+    tarifa_3m.append(k["tarifa_media"] if k else 0)
 
-# -------- Cleaning Revenue --------
+# -------- Cleaning / Adm --------
 cleaning_3m = []
-for p in periodos_3m:
-    k = calcular_kpis_hist_mes(df_hist_comp, p)
-    cleaning_3m.append(k["cleaning"] if k and k["cleaning"] is not None else 0)
-
-# -------- Taxa Adm --------
 adm_3m = []
+
 for p in periodos_3m:
     k = calcular_kpis_hist_mes(df_hist_comp, p)
-    adm_3m.append(k["adm"] if k and k["adm"] is not None else 0)
+    cleaning_3m.append(k["cleaning"] if k and k["cleaning"] else 0)
+    adm_3m.append(k["adm"] if k and k["adm"] else 0)
 
-# -------- Atingimento Médio --------
+# -------- Atingimento / Nível (USANDO A MESMA FUNÇÃO) --------
 ating_3m = []
 nivel_3m = []
 
-base_tmp = calcular_base_niveis(df_hist_comp, df_meta, p, partner_sel)
+for p in periodos_3m:
+    base_tmp = calcular_base_niveis(df_hist_comp, df_meta, p, partner_sel)
 
-ating_3m.append(
-    base_tmp["atingimento"].mean() * 100
-    if not base_tmp.empty else 0
-)
+    ating_3m.append(
+        base_tmp["atingimento"].mean() * 100
+        if not base_tmp.empty else 0
+    )
 
-nivel_3m.append(
-    base_tmp["nivel_num"].mean()
-    if not base_tmp.empty else 0
-)
+    nivel_3m.append(
+        base_tmp["nivel_num"].mean()
+        if not base_tmp.empty else 0
+    )
 
 
 def grafico_historico_3m(titulo, valores, labels, nome_barra, unidade="", cor="#2563eb"):
-    delta = valores[-1] - valores[-2] if len(valores) >= 2 else None
+
+    delta = None
+    if len(valores) >= 2 and valores[-2] is not None:
+        delta = valores[-1] - valores[-2]
+
+    texto_delta = (
+        f"Δ último mês: {delta:+,.2f}{unidade}"
+        if isinstance(delta, (int, float))
+        else "Δ último mês: -"
+    )
 
     fig = go.Figure()
     fig.add_bar(
         x=labels,
         y=valores,
         marker_color=cor,
-        text=[f"{v:,.2f}{unidade}" for v in valores],
+        text=[
+            f"{v:,.2f}{unidade}" if isinstance(v, (int, float)) else "-"
+            for v in valores
+        ],
         textposition="outside"
     )
 
     fig.update_layout(
-        title=f"{titulo}<br><sup>Δ último mês: {delta:+,.2f}{unidade if delta is not None else ''}</sup>",
+        title=f"{titulo}<br><sup>{texto_delta}</sup>",
         yaxis_title=nome_barra,
-        margin=dict(t=80, b=40)
+        margin=dict(t=90, b=40)
     )
 
     st.plotly_chart(fig, use_container_width=True)
+
 
 # -------- GRID --------
 
