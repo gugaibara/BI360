@@ -33,7 +33,7 @@ st.markdown(
     """
     <style>
     .header-container {
-        background: linear-gradient(90deg, #2563eb, #1e40af);
+        background: linear-gradient(90deg, #0f2027, #203a43, #2c5364);
         padding: 26px 30px;
         border-radius: 18px;
         margin-bottom: 26px;
@@ -45,9 +45,9 @@ st.markdown(
         margin: 0;
     }
     .header-subtitle {
-        font-size: 15px;
-        color: rgba(255,255,255,0.85);
-        margin-top: 6px;
+        font-size: 14px;
+        color: #d1d5db;
+        margin-top: 4px;
     }
     </style>
     """,
