@@ -288,96 +288,74 @@ def calcular_kpis_hist_mes(df_hist, periodo):
     }
 
 
-def calcular_metricas_nivel(df_hist, df_meta, periodo, partner_sel):
+def calcular_base_niveis(df_hist, df_meta, periodo, partner_sel):
     """
-    Calcula:
-    - atingimento médio (%)
-    - nível médio (numérico)
-
-    Regra:
-    atingimento = sum(plclcadm) / receita_esperada
+    Retorna base por unidade com:
+    - realizado_plclcadm
+    - receita_esperada
+    - atingimento
+    - nivel (texto)
+    - nivel_num (1 a 5)
     """
 
-    # -------------------------
-    # Normaliza período (YYYY-MM)
-    # -------------------------
+    # --- normaliza período ---
     if isinstance(periodo, pd.Period):
         periodo_str = periodo.strftime("%Y-%m")
     else:
         periodo_str = str(periodo)
 
-    # -------------------------
-    # Filtra histórico do mês
-    # -------------------------
-    df_m = df_hist[df_hist["mês"] == periodo_str].copy()
+    # --- filtra histórico ---
+    df_m = df_hist[df_hist["mes_dt"] ==
+                   pd.Period(periodo_str, freq="M")].copy()
 
     if partner_sel != "Todos":
         df_m = df_m[df_m["partnership"] == partner_sel]
 
     if df_m.empty:
-        return {
-            "atingimento_medio": None,
-            "nivel_medio": None
-        }
+        return pd.DataFrame()
 
-    # -------------------------
-    # Soma PLCLCADM por unidade
-    # -------------------------
-    plclcadm_unidade = (
+    # --- soma PLCLCADM por unidade ---
+    base = (
         df_m
         .groupby(["propriedade", "unidade"], as_index=False)
         .agg(realizado_plclcadm=("plclcadm", "sum"))
     )
 
-    # -------------------------
-    # Merge com metas
-    # -------------------------
-    nivel_base = plclcadm_unidade.merge(
+    # --- merge com metas ---
+    base = base.merge(
         df_meta,
         on=["propriedade", "unidade"],
         how="left"
     )
 
-    # -------------------------
-    # Garante numérico
-    # -------------------------
-    nivel_base["realizado_plclcadm"] = pd.to_numeric(
-        nivel_base["realizado_plclcadm"], errors="coerce"
-    )
-    nivel_base["receita_esperada"] = pd.to_numeric(
-        nivel_base["receita_esperada"], errors="coerce"
+    # --- garante numérico ---
+    base["realizado_plclcadm"] = pd.to_numeric(
+        base["realizado_plclcadm"], errors="coerce"
     )
 
-    # -------------------------
-    # Calcula atingimento
-    # -------------------------
-    nivel_base["atingimento"] = None
-    mask = nivel_base["receita_esperada"] > 0
-
-    nivel_base.loc[mask, "atingimento"] = (
-        nivel_base.loc[mask, "realizado_plclcadm"] /
-        nivel_base.loc[mask, "receita_esperada"]
+    base["receita_esperada"] = pd.to_numeric(
+        base["receita_esperada"], errors="coerce"
     )
 
-    # -------------------------
-    # Classificação de nível
-    # -------------------------
-    nivel_base["nivel"] = "Sem Meta"
+    # --- calcula atingimento ---
+    base["atingimento"] = None
+    mask = base["receita_esperada"] > 0
 
-    nivel_base.loc[mask, "nivel"] = (
-        nivel_base.loc[mask, "atingimento"]
+    base.loc[mask, "atingimento"] = (
+        base.loc[mask, "realizado_plclcadm"] /
+        base.loc[mask, "receita_esperada"]
+    )
+
+    # --- classifica nível ---
+    base["nivel"] = "Sem Meta"
+    base.loc[mask, "nivel"] = (
+        base.loc[mask, "atingimento"]
         .apply(classificar_nivel)
     )
 
-    # -------------------------
-    # Converte nível para número
-    # -------------------------
-    nivel_base["nivel_num"] = nivel_base["nivel"].map(MAPA_NIVEL_NUM)
+    base["nivel_num"] = base["nivel"].map(MAPA_NIVEL_NUM)
 
-    return {
-        "atingimento_medio": nivel_base.loc[mask, "atingimento"].mean(),
-        "nivel_medio": nivel_base.loc[mask, "nivel_num"].mean()
-    }
+    return base
 
 
 # ======================
@@ -406,17 +384,50 @@ periodo_yoy = periodo - 12
 # NÍVEL MÉDIO (ATUAL / M1 / YOY)
 # ======================
 
-metricas_nivel_atual = calcular_metricas_nivel(
+base_niveis_atual = calcular_base_niveis(
     df_hist_comp, df_meta, periodo, partner_sel
 )
 
-metricas_nivel_m1 = calcular_metricas_nivel(
+metricas_nivel_atual = {
+    "atingimento_medio": (
+        base_niveis_atual["atingimento"].mean()
+        if not base_niveis_atual.empty else None
+    ),
+    "nivel_medio": (
+        base_niveis_atual["nivel_num"].mean()
+        if not base_niveis_atual.empty else None
+    )
+}
+
+base_niveis_m1 = calcular_base_niveis(
     df_hist_comp, df_meta, periodo_m1, partner_sel
 )
 
-metricas_nivel_yoy = calcular_metricas_nivel(
+metricas_nivel_m1 = {
+    "atingimento_medio": (
+        base_niveis_m1["atingimento"].mean()
+        if not base_niveis_m1.empty else None
+    ),
+    "nivel_medio": (
+        base_niveis_m1["nivel_num"].mean()
+        if not base_niveis_m1.empty else None
+    )
+}
+
+base_niveis_yoy = calcular_base_niveis(
     df_hist_comp, df_meta, periodo_yoy, partner_sel
 )
+
+metricas_nivel_yoy = {
+    "atingimento_medio": (
+        base_niveis_yoy["atingimento"].mean()
+        if not base_niveis_yoy.empty else None
+    ),
+    "nivel_medio": (
+        base_niveis_yoy["nivel_num"].mean()
+        if not base_niveis_yoy.empty else None
+    )
+}
 
 # ======================
 # KPIs DE RESERVAS
@@ -608,50 +619,7 @@ if total_receita > 0:
 # DISTRIBUIÇÃO DE NÍVEIS
 # ======================
 
-# soma do PLCLCADM por unidade no mês (Histórico Unidades)
-plclcadm_unidade = (
-    df_hist_m
-    .groupby(["propriedade", "unidade"], as_index=False)
-    .agg({"plclcadm": "sum"})
-    .rename(columns={"plclcadm": "realizado_plclcadm"})
-)
-
-nivel_base = plclcadm_unidade.merge(
-    df_meta,
-    on=["propriedade", "unidade"],
-    how="left"
-)
-
-# garante numérico antes de qualquer cálculo
-nivel_base["realizado_plclcadm"] = pd.to_numeric(
-    nivel_base["realizado_plclcadm"], errors="coerce"
-)
-
-nivel_base["receita_esperada"] = pd.to_numeric(
-    nivel_base["receita_esperada"], errors="coerce"
-)
-
-nivel_base["atingimento"] = None
-
-mask_meta = (
-    nivel_base["receita_esperada"].notna() &
-    (nivel_base["receita_esperada"] > 0)
-)
-
-nivel_base.loc[mask_meta, "atingimento"] = (
-    nivel_base.loc[mask_meta, "realizado_plclcadm"] /
-    nivel_base.loc[mask_meta, "receita_esperada"]
-)
-
-nivel_base["nivel"] = "Sem Meta"
-nivel_base.loc[mask_meta, "nivel"] = (
-    nivel_base.loc[mask_meta, "atingimento"]
-    .apply(classificar_nivel)
-)
-
-# ======================
-# AGREGAÇÃO POR NÍVEL
-# ======================
+nivel_base = base_niveis_atual.copy()
 
 dist_niveis = (
     nivel_base
@@ -958,23 +926,19 @@ for p in periodos_3m:
 
 # -------- Atingimento Médio --------
 ating_3m = []
-for p in periodos_3m:
-    m = calcular_metricas_nivel(df_hist_comp, df_meta, p, partner_sel)
-    ating_3m.append(
-        m["atingimento_medio"] * 100
-        if m and m["atingimento_medio"] is not None
-        else 0
-    )
-
-# -------- Nível Médio --------
 nivel_3m = []
-for p in periodos_3m:
-    m = calcular_metricas_nivel(df_hist_comp, df_meta, p, partner_sel)
-    nivel_3m.append(
-        m["nivel_medio"]
-        if m and m["nivel_medio"] is not None
-        else 0
-    )
+
+base_tmp = calcular_base_niveis(df_hist_comp, df_meta, p, partner_sel)
+
+ating_3m.append(
+    base_tmp["atingimento"].mean() * 100
+    if not base_tmp.empty else 0
+)
+
+nivel_3m.append(
+    base_tmp["nivel_num"].mean()
+    if not base_tmp.empty else 0
+)
 
 
 def grafico_historico_3m(titulo, valores, labels, nome_barra, unidade="", cor="#2563eb"):
