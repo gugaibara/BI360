@@ -319,28 +319,6 @@ with f2:
     )
 
 
-with f3:
-    unidades_ativas = (
-        df_res_m[["propriedade", "unidade"]]
-        .drop_duplicates()
-        .shape[0]
-    )
-
-    st.markdown(
-        f"""
-        <div style="
-            background: #0f172a;
-            padding: 16px;
-            border-radius: 12px;
-        ">
-            <div style="font-size: 12px; color: #94a3b8;">Unidades Ativas</div>
-            <div style="font-size: 20px; font-weight: 600;">{unidades_ativas}</div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-
 # ======================
 # KPIs COMPARATIVOS
 # ======================
