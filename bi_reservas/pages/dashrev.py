@@ -25,8 +25,28 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("📈 Dash Revenue — Resultados")
-st.caption("Apresentação executiva de resultados mensais")
+# ======================
+# HEADER EXECUTIVO
+# ======================
+
+st.markdown(
+    f"""
+    <div style="
+        background: linear-gradient(90deg, #2563eb, #1e40af);
+        padding: 24px 28px;
+        border-radius: 16px;
+        color: white;
+        margin-bottom: 20px;
+    ">
+        <h1 style="margin: 0; font-size: 34px;">📈 Dash Revenue</h1>
+        <p style="margin: 6px 0 0 0; font-size: 16px; opacity: 0.9;">
+            Resultados financeiros e operacionais — visão executiva
+        </p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
 
 CORES_CANAIS = {
     "Airbnb": "#FF00CC",
@@ -201,20 +221,21 @@ meses = (
 )
 
 # ======================
-# FILTROS EXECUTIVOS
+# SIDEBAR — FILTROS
 # ======================
 
-c1, c2 = st.columns([1, 3])
+with st.sidebar:
+    st.header("🎛️ Filtros")
 
-with c1:
     mes_sel = st.selectbox(
         "📅 Mês de análise",
         meses,
         index=len(meses) - 1
     )
 
-with c2:
-    partners = ["Todos"] + sorted(df_res["partner"].dropna().unique().tolist())
+    partners = ["Todos"] + sorted(
+        df_res["partner"].dropna().unique().tolist()
+    )
 
     partner_sel = st.selectbox(
         "🤝 Partner",
@@ -239,6 +260,30 @@ if partner_sel != "Todos":
 if df_res_m.empty:
     st.warning("Sem dados de reservas para o mês selecionado.")
     st.stop()
+
+# ======================
+# CONTEXTO DOS FILTROS
+# ======================
+
+c1, c2, c3 = st.columns(3)
+
+with c1:
+    st.metric(
+        label="📅 Mês de Análise",
+        value=mes_sel
+    )
+
+with c2:
+    st.metric(
+        label="🤝 Partner",
+        value=partner_sel
+    )
+
+with c3:
+    st.metric(
+        label="🏘️ Unidades Ativas",
+        value=f"{df_res_m[['propriedade', 'unidade']].drop_duplicates().shape[0]}"
+    )
 
 # ======================
 # KPIs COMPARATIVOS
@@ -482,8 +527,12 @@ cleaning_revenue = df_hist_m["cleaning_revenue"].sum()
 taxa_adm = df_hist_m["adm_360"].sum()
 
 # ---- Layout KPIs ----
-
-st.subheader("📌 Resumo do Mês")
+st.divider()
+st.subheader("📊 Resumo Executivo do Mês")
+st.caption(
+    "Principais indicadores financeiros, operacionais e de performance "
+    "para o período selecionado."
+)
 
 # ======================
 # LINHA 1 — KPIs PRINCIPAIS
