@@ -15,6 +15,18 @@ def formatar_pct(valor, casas=1):
         return "-"
     return f"{valor:.{casas}f}%"
 
+
+def limpar_moeda(col):
+    return (
+        col.astype(str)
+        .str.replace("R$", "", regex=False)
+        .str.replace(".", "", regex=False)
+        .str.replace(",", ".", regex=False)
+        .str.strip()
+        .replace("", None)
+        .astype(float)
+    )
+
 # ======================
 # CONFIGURAÇÃO DA PÁGINA
 # ======================
@@ -111,6 +123,8 @@ df_res, df_hist, df_meta = load_data()
 
 df_res["partner"] = df_res["partner"].astype(str).str.strip()
 df_hist["partnership"] = df_hist["partnership"].astype(str).str.strip()
+df_hist["plclcadm"] = df_hist["plclcadm"].fillna(0)
+df_meta["receita_esperada"] = limpar_moeda(df_meta["receita_esperada"])
 
 df_hist["mes_dt"] = pd.to_datetime(
     df_hist["mês"].astype(str),
@@ -574,30 +588,21 @@ if total_receita > 0:
 # DISTRIBUIÇÃO DE NÍVEIS
 # ======================
 
-# ======================
-# BASE DE NÍVEIS — ATINGIMENTO POR PLCLCADM
-# ======================
-
 # soma do PLCLCADM por unidade no mês (Histórico Unidades)
 plclcadm_unidade = (
     df_hist_m
     .groupby(["propriedade", "unidade"], as_index=False)
-    .agg({
-        "plclcadm": "sum"
-    })
+    .agg({"plclcadm": "sum"})
     .rename(columns={"plclcadm": "realizado_plclcadm"})
 )
 
-# junta com base de metas
 nivel_base = plclcadm_unidade.merge(
     df_meta,
     on=["propriedade", "unidade"],
     how="left"
 )
 
-# calcula atingimento apenas quando existe meta válida
 nivel_base["atingimento"] = None
-
 mask_meta = nivel_base["receita_esperada"] > 0
 
 nivel_base.loc[mask_meta, "atingimento"] = (
@@ -605,9 +610,7 @@ nivel_base.loc[mask_meta, "atingimento"] = (
     nivel_base.loc[mask_meta, "receita_esperada"]
 )
 
-# classificação de nível
 nivel_base["nivel"] = "Sem Meta"
-
 nivel_base.loc[mask_meta, "nivel"] = (
     nivel_base.loc[mask_meta, "atingimento"]
     .apply(classificar_nivel)
