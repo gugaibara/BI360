@@ -296,7 +296,7 @@ with f1:
             padding: 16px;
             border-radius: 12px;
         ">
-            <div style="font-size: 12px; color: #94a3b8;">Partner</div>
+            <div style="font-size: 15px; color: #94a3b8;">Partner</div>
             <div style="font-size: 20px; font-weight: 600;">{partner_sel}</div>
         </div>
         """,
@@ -311,7 +311,7 @@ with f2:
             padding: 16px;
             border-radius: 12px;
         ">
-            <div style="font-size: 12px; color: #94a3b8;">Mês</div>
+            <div style="font-size: 15px; color: #94a3b8;">Mês</div>
             <div style="font-size: 20px; font-weight: 600;">{mes_sel}</div>
         </div>
         """,
@@ -561,94 +561,130 @@ cleaning_revenue = df_hist_m["cleaning_revenue"].sum()
 taxa_adm = df_hist_m["adm_360"].sum()
 
 # ======================
-# RESUMO EXECUTIVO DO MÊS
+# KPIs — CARDS VISUAIS
 # ======================
 
-st.markdown("## 📊 Resumo Executivo do Mês")
-st.caption(
-    "Principais indicadores financeiros, operacionais e de performance "
-    "para o período selecionado."
-)
+st.markdown("### 📊 Indicadores do Mês")
 
-st.markdown("---")
+
+def card_kpi(titulo, valor, subtitulo="", cor="#020617"):
+    st.markdown(
+        f"""
+        <div style="
+            background: {cor};
+            padding: 18px 20px;
+            border-radius: 16px;
+            border: 1px solid #1e293b;
+            height: 100%;
+        ">
+            <div style="font-size: 12px; color: #94a3b8;">{titulo}</div>
+            <div style="font-size: 26px; font-weight: 700; margin-top: 6px;">
+                {valor}
+            </div>
+            <div style="font-size: 12px; color: #64748b; margin-top: 4px;">
+                {subtitulo}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
 
 # ======================
 # LINHA 1 — KPIs PRINCIPAIS
 # ======================
-k1, k2, k3, k4 = st.columns(4)
+c1, c2, c3, c4 = st.columns(4)
 
-with k1:
-    st.metric(
-        label="Receita Total",
-        value=formatar_valor_exec(receita_total)
+with c1:
+    card_kpi(
+        "Receita Total",
+        formatar_valor_exec(receita_total),
+        "Total do mês",
+        "#020617"
     )
 
-with k2:
-    st.metric(
-        label="Ocupação",
-        value=formatar_pct(ocupacao)
+with c2:
+    card_kpi(
+        "Ocupação",
+        formatar_pct(ocupacao),
+        "Média do período",
+        "#020617"
     )
 
-with k3:
-    st.metric(
-        label="Tarifa Média",
-        value=formatar_valor_exec(tarifa_media)
+with c3:
+    card_kpi(
+        "Tarifa Média",
+        formatar_valor_exec(tarifa_media),
+        "ADR do mês",
+        "#020617"
     )
 
-with k4:
-    st.metric(
-        label="Nível Médio",
-        value=(
+with c4:
+    card_kpi(
+        "Nível Médio",
+        (
             f"{metricas_nivel_atual['nivel_medio']:.2f}"
             if metricas_nivel_atual["nivel_medio"] is not None
             else "-"
-        )
+        ),
+        "Performance média",
+        "#020617"
     )
 
 st.markdown("")
 
 # ======================
-# LINHA 2 — KPIs DE APOIO
+# LINHA 2 — KPIs FINANCEIROS
 # ======================
-k5, k6, k7, k8 = st.columns(4)
+c5, c6, c7, c8 = st.columns(4)
 
-with k5:
-    st.metric(
-        label="Cleaning Revenue",
-        value=(
+with c5:
+    card_kpi(
+        "Cleaning Revenue",
+        (
             formatar_valor_exec(kpis_hist_atual["cleaning"])
             if kpis_hist_atual and kpis_hist_atual.get("cleaning") is not None
             else "-"
-        )
+        ),
+        "Receita de limpeza",
+        "#020617"
     )
 
-with k6:
-    st.metric(
-        label="Taxa Adm",
-        value=(
+with c6:
+    card_kpi(
+        "Taxa Adm",
+        (
             formatar_valor_exec(kpis_hist_atual["adm"])
             if kpis_hist_atual and kpis_hist_atual.get("adm") is not None
             else "-"
-        )
+        ),
+        "Fee administrativo",
+        "#020617"
     )
 
-with k7:
-    st.metric(
-        label="Unidades Analisadas",
-        value=df_res_m[["propriedade", "unidade"]]
+with c7:
+    card_kpi(
+        "Unidades",
+        df_res_m[["propriedade", "unidade"]]
         .drop_duplicates()
-        .shape[0]
+        .shape[0],
+        "Unidades analisadas",
+        "#020617"
     )
 
-with k8:
-    st.metric(
-        label="Atingimento Médio",
-        value=(
+with c8:
+    card_kpi(
+        "Atingimento Médio",
+        (
             formatar_pct(metricas_nivel_atual["atingimento_medio"] * 100)
             if metricas_nivel_atual["atingimento_medio"] is not None
             else "-"
-        )
+        ),
+        "Meta vs realizado",
+        "#020617"
     )
+
+st.markdown("---")
 
 # ======================
 # SHARE DE CANAL
