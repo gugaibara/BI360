@@ -187,7 +187,7 @@ df_hist.columns = (
 df_hist["cleaning_revenue"] = parse_brl(df_hist["cleaning_revenue"])
 df_hist["adm_360"] = parse_brl(df_hist["adm_360"])
 df_hist["price_less_comission"] = parse_brl(df_hist["price_less_comission"])
-df_hist["plclc"] = parse_brl(df_hist["plclc"])
+df_hist["plclcadm"] = parse_brl(df_hist["plclcadm"])
 
 # ======================
 # FILTRO DE MÊS (EXECUTIVO)
